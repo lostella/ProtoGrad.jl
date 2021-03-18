@@ -50,6 +50,4 @@ struct Nesterov
     Nesterov(; kwargs...) = new(kwargs)
 end
 
-function (n::Nesterov)(args...)
-    NesterovIterable(args...; n.kwargs...)
-end
+(n::Nesterov)(args...) = NesterovIterable(args...; n.kwargs...)

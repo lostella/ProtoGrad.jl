@@ -41,6 +41,4 @@ struct GradientDescent
     GradientDescent(; kwargs...) = new(kwargs)
 end
 
-function (gd::GradientDescent)(args...)
-    GradientDescentIterable(args...; gd.kwargs...)
-end
+(gd::GradientDescent)(args...) = GradientDescentIterable(args...; gd.kwargs...)

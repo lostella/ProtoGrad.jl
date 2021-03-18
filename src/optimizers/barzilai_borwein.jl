@@ -40,6 +40,4 @@ struct BarzilaiBorwein
     BarzilaiBorwein(; kwargs...) = new(kwargs)
 end
 
-function (bb::BarzilaiBorwein)(args...)
-    BarzilaiBorweinIterable(args...; bb.kwargs...)
-end
+(bb::BarzilaiBorwein)(args...) = BarzilaiBorweinIterable(args...; bb.kwargs...)

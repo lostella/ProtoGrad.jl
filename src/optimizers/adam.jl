@@ -54,6 +54,4 @@ struct Adam
     Adam(; kwargs...) = new(kwargs)
 end
 
-function (a::Adam)(args...)
-    AdamIterable(args...; a.kwargs...)
-end
+(a::Adam)(args...) = AdamIterable(args...; a.kwargs...)
