@@ -1,11 +1,11 @@
-using MLDatasets
+using MLDatasets: MNIST
 using Flux: onehotbatch
 using ProtoGrad: Conv, Linear, Compose, maxpool, relu, softmax
 using ProtoGrad: SupervisedObjective, forever, cross_entropy, class_error
 using ProtoGrad: Adam
-using StatsBase
-using ProgressMeter
-using Serialization
+using ProgressMeter: @showprogress
+using StatsBase: sample
+using Serialization: serialize, deserialize
 
 train_x, train_y = MNIST.traindata(Float32, dir=joinpath(".", "datasets", "MNIST"))
 test_x, test_y = MNIST.testdata(Float32, dir=joinpath(".", "datasets", "MNIST"))

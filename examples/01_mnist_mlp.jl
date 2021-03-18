@@ -1,16 +1,17 @@
-using MLDatasets
-using Flux
-using ProtoGrad: Linear, Compose, SupervisedObjective, cross_entropy, class_error, forever
+using MLDatasets: MNIST
+using Flux: onehotbatch
+using ProtoGrad: Linear, Compose, relu, softmax
+using ProtoGrad: SupervisedObjective, cross_entropy, class_error, forever
 using ProtoGrad: GradientDescent
-using StatsBase
-using ProgressMeter
-using Serialization
+using ProgressMeter: @showprogress
+using StatsBase: sample
+using Serialization: serialize, deserialize
 
 train_x, train_y = MNIST.traindata(Float32, dir=joinpath(".", "datasets", "MNIST"))
 test_x, test_y = MNIST.testdata(Float32, dir=joinpath(".", "datasets", "MNIST"))
 
 train_x_flat = reshape(train_x, prod(size(train_x)[1:2]), size(train_x)[3])
-train_y_onehot = Flux.onehotbatch(train_y, 0:9)
+train_y_onehot = onehotbatch(train_y, 0:9)
 
 input_size, dataset_size = size(train_x_flat)
 hidden_size = 100
@@ -54,7 +55,7 @@ serialize(model_filename, m)
 m_deserialized = deserialize(model_filename)
 
 test_x_flat = reshape(test_x, prod(size(test_x)[1:2]), size(test_x)[3])
-test_y_onehot = Flux.onehotbatch(test_y, 0:9)
+test_y_onehot = onehotbatch(test_y, 0:9)
 
 err = class_error(m_deserialized(test_x_flat), test_y_onehot)
 
