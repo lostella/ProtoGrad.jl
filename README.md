@@ -1,7 +1,7 @@
 # ProtoGrad.jl
 
 ProtoGrad is an **experimental** Julia package to work with gradient-based model optimization, including deep learning.
-It aims at being simple, composable, and flexibile.
+It aims at being simple, composable, and flexible.
 
 The package builds on top of much more mature and popular libraries, above all [NNLib](https://github.com/FluxML/NNlib.jl) (providing common operators in deep learning) and [Zygote](https://github.com/FluxML/Zygote.jl) (for automatic differentiation).
 
