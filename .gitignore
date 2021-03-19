@@ -2,3 +2,6 @@
 .vscode
 
 Manifest.toml
+
+examples/datasets
+examples/serialized_*
