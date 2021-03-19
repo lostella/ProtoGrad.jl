@@ -1,17 +1,11 @@
 # ProtoGrad.jl
 
-*Deep learning, now with 80% less fat.*
+ProtoGrad is an **experimental** Julia package to work with gradient-based model optimization, including deep learning.
+It aims at being simple, composable, and flexibile.
 
-`ProtoGrad` is an experimental Julia package to work with gradient-based model optimization, including deep learning models.
-Its main goals are simplicity, composability, and flexibility.
+The package builds on top of much more mature and popular libraries, above all [NNLib](https://github.com/FluxML/NNlib.jl) (providing common operators in deep learning) and [Zygote](https://github.com/FluxML/Zygote.jl) (for automatic differentiation).
 
-The package borrows several pieces from much more mature and popular libraries, above all automatic differentiation (from `Zygote`) and common operators in deep learning (from `NNLib`).
-
-Check out the [examples folder](./examples/) on how to use `ProtoGrad` to construct and train models, or keep following this README to get a feeling for what the package offers.
-
-```julia
-using ProtoGrad
-```
+Check out the [examples folder](./examples/) on how to use ProtoGrad to construct and train models, or keep following the present README to get a feeling for the package philosophy.
 
 ## Models
 
@@ -27,10 +21,10 @@ end
 (m::LinearModel)(x) = m.A * x .+ m.b
 ```
 
-The only assumption on models is that their attributes are either:
+The only assumption on models is that their set of attributes is any combination of:
 1. Numerical arrays, i.e. of type `<:AbstractArray{<:AbstractFloat}` ;
 2. Other `Model` objects;
-3. `Tuple` containing objects of the above types.
+3. `Tuple` containing objects as in the previous points.
 
 Models defined this way get the structure of a vector space, for free:
 
@@ -40,10 +34,12 @@ m_scaled = 2*m # this is also of type LinearModel
 m_sum = m + m_scaled # this too
 ```
 
+**Note:** all attributes of a `ProtoGrad.Model` object are assumed to be parameters to be optimized. This means, for example, that hyper-paramenters cannot be stored as attributes: they can however be stored as type parameters.
+
 ## Objective functions
 
 Training a model usually amounts to optimizing some objective function.
-While `ProtoGrad` exposes tools to define common objectives, any custom function of the model will do. For example, the following implements the average squared Euclidean distance between the model output and ground-truth labels:
+While ProtoGrad exposes tools to define common objectives, any custom function of the model will do. For example, the following implements the average squared Euclidean distance between the model output and ground-truth labels:
 
 ```julia
 objective(x, y, model) = sum((model(x) - y).^2) / size(x, 2)
@@ -68,23 +64,27 @@ Computing the gradient of our objective with respect to the model is easy:
 grad, val = ProtoGrad.gradient(model -> objective(x, y, model), m)
 ```
 
-We can check that `val` is the value of the objective evaluated at `m`, while `grad` is the gradient of the objective with respect to `m`, *and is itself a `LinearModel` object*: in particular, this means it can be added or subtracted from `m`.
+We can check that `val` is the value of the objective evaluated at `m`, while `grad` contains the gradient of the objective with respect to **all** attributes of `m`: most importantly **`grad` is itself a `LinearModel` object**. Therefore, `grad` can be added or subtracted from `m`.
 
 ## Optimizing models
 
 One is free to implement any custom training loop to optimize the model.
-`ProtoGrad` implements gradient descent (and some of its variants) in the form of iterators:
+ProtoGrad implements gradient descent (and some of its variants) in the form of iterators:
 
 ```julia
 optimizer = ProtoGrad.GradientDescent(stepsize=1e-1)
 iterations = optimizer(m, model -> objective(x, y, model))
+```
 
-# this is just compact, but not memory efficient
+The `iterations` object is an iterator that can be looped over, and its elements be inspected e.g. to decide when to stop training. For the sake of compactness, here we will just take a predefined iteration as solution: 
+
+```julia
+# NOTE: this is just compact, but not memory efficient
 solution = collect(Iterators.take(iterations, 100))[end]
 ```
 
 To verify that this worked, we can check that the objective value is much smaller for `solution` than it was for `m`:
 
 ```julia
-objective(x, y, solution) # returns some small number
+objective(x, y, solution) # returns a small number compared to `m`
 ```
