@@ -31,11 +31,18 @@ Models defined this way get the structure of a vector space, for free:
 
 ```julia
 m = LinearModel(randn(3, 5), randn(3))
-m_scaled = 2*m # this is also of type LinearModel
+m_scaled = 2 * m # this is also of type LinearModel
 m_sum = m + m_scaled # this too
 ```
 
-You can take dot products too!
+The dot-syntax for in-place assignment and loop fusion can also be used:
+
+```julia
+m_scaled .= 2 .* m
+m_sum .= m .+ m_scaled
+```
+
+And you can take dot products too!
 
 ```julia
 using LinearAlgebra
@@ -45,22 +52,54 @@ dot(m, m_sum)
 ## Objective functions
 
 Training a model usually amounts to optimizing some objective function.
-While ProtoGrad exposes tools to define common objectives, any custom function of the model will do.
-For example, the following implements the average squared Euclidean distance between the model output and ground-truth labels:
+In principle, any custom function of the model will do.
+For example, we can use the mean squared error
 
 ```julia
-objective(x, y, model) = sum((model(x) - y).^2) / size(x, 2)
+mean_squared_error(yhat, y) = sum((yhat .- y).^2) / size(y)[end]
 ```
 
-We can now generate some data `(x, y)`, according to a random linear model (with noise), and evaluate the model `m` we previously initialized:
+together with some artificial data (generated according to a random, noisy linear model)
 
 ```julia
 A_original = randn(3, 5)
 b_original = randn(3)
 x = randn(5, 300)
 y = A_original * x .+ b_original .+ randn(3, 300)
+```
 
-objective(x, y, m) # returns some large number
+to define the objective:
+
+```julia
+objective = model -> mean_squared_error(model(x), y)
+
+objective(m) # returns some large number
+```
+
+Stochastic approximations to the full-data objective above can be implemented by iterating the data in batches, and coupling it with the loss, as follows:
+
+```julia
+using StatsBase
+
+batch_size = 64
+batches = (
+    begin
+        idx = sample(1:size(x)[end], batch_size, replace = false)
+        (x[:, idx], y[:, idx])
+    end
+    for _ in ProtoGrad.forever
+)
+
+stochastic_objective = ProtoGrad.SupervisedObjective(mean_squared_error, batches)
+```
+
+Evaluating this new objective on `m` will yield
+
+```julia
+stochastic_objective(m) # a different
+stochastic_objective(m) # value
+stochastic_objective(m) # every
+stochastic_objective(m) # time
 ```
 
 ## Gradient computation
@@ -68,7 +107,7 @@ objective(x, y, m) # returns some large number
 Computing the gradient of our objective with respect to the model is easy:
 
 ```julia
-grad, val = ProtoGrad.gradient(model -> objective(x, y, model), m)
+grad, val = ProtoGrad.gradient(objective, m)
 ```
 
 Here `val` is the value of the objective evaluated at `m`, while `grad` contains its gradient with respect to **all** attributes of `m`. Most importantly **`grad` is itself a `LinearModel` object**. Therefore, `grad` can be added or subtracted from `m`, used in dot products and so on.
@@ -78,15 +117,15 @@ Here `val` is the value of the objective evaluated at `m`, while `grad` contains
 > Some hyperparameters are implicit in the model structure (e.g. number of layers or units);
 > in any case, they can usually be stored as type parameters (as ["value types"](https://docs.julialang.org/en/v1/manual/types/#%22Value-types%22)).
 
-## Fitting models to data
+## Fitting models to the objective
 
-Fitting models to data is now relatively simple.
+Fitting models using gradient-based algorithms is now relatively simple.
 The following loop is plain gradient descent with constant stepsize:
 
 ```julia
 m_fit = copy(m)
 for it in 1:100
-    grad, _ = ProtoGrad.gradient(model -> objective(x, y, model), m_fit)
+    grad, _ = ProtoGrad.gradient(objective, m_fit)
     m_fit .= m_fit .- 0.1 * grad
 end
 ```
@@ -94,17 +133,17 @@ end
 To verify that this worked, we can check that the objective value is much smaller for `m_fit` than it was for `m`:
 
 ```julia
-objective(x, y, m_fit) # returns a small number compared to `m`
+objective(m_fit) # returns a small number compared to `m`
 ```
 
 ProtoGrad implements gradient descent and other optimization algorithms in the form of iterators. The following will yield the same iterations as we just did:
 
 ```julia
 optimizer = ProtoGrad.GradientDescent(stepsize=1e-1)
-iterations = optimizer(m, model -> objective(x, y, model))
+iterations = optimizer(m, objective)
 ```
 
-The `iterations` object is an iterator that can be looped over, and its elements be inspected e.g. to decide when to stop training. For the sake of compactness, here we will just take a predefined iteration as solution: 
+The `iterations` object is an iterator that can be looped over, and its elements be inspected (for example to decide when to stop training). For the sake of compactness, here we will just take a predefined iteration as solution: 
 
 ```julia
 # NOTE: this is just compact, but not memory efficient
