@@ -26,15 +26,15 @@ function get_instance_and_update!(f::SupervisedObjective)
 end
 
 function (f::SupervisedObjective)(m)
-    xs, y = get_instance_and_update!(f)
-    return f.loss(m(xs...), y)
+    x, y = get_instance_and_update!(f)
+    return f.loss(m(x), y)
 end
 
 # NOTE we need to explicitly implement this because Zygote doesn't like mutation
 
 function gradient(f::SupervisedObjective, m::Model)
-    xs, y = get_instance_and_update!(f)
-    raw_grad, out = fallback_gradient(m -> f.loss(m(xs...), y), m)
+    x, y = get_instance_and_update!(f)
+    raw_grad, out = fallback_gradient(m -> f.loss(m(x), y), m)
     grad = reconstruct(raw_grad, m)
     return grad, out
 end

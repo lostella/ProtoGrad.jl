@@ -29,7 +29,7 @@ batch_size = 128
 training_batches = (
     begin
         idx = sample(1:size(train_x_flat)[end], batch_size, replace = false)
-        ((train_x_flat[:, idx],), train_y_onehot[:, idx])
+        (train_x_flat[:, idx], train_y_onehot[:, idx])
     end
     for _ in forever
 )

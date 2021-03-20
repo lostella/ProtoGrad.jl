@@ -179,7 +179,7 @@ end
         x = randn(T, input_size, batch_size)
         y = W * x .+ b + randn(T, output_size, batch_size)
 
-        data_iter = Iterators.repeated(((x,), y))
+        data_iter = Iterators.repeated((x, y))
         f = SupervisedObjective(mse, data_iter)
 
         grad, out = ProtoGrad.gradient(f, m)
@@ -214,7 +214,7 @@ end
         x = randn(T, input_size, batch_size)
         y = W_true * x .+ b_true + randn(T, output_size, batch_size)
 
-        data_iter = Iterators.repeated(((x,), y))
+        data_iter = Iterators.repeated((x, y))
         f = SupervisedObjective(mse, data_iter)
 
         grad, out = ProtoGrad.gradient(f, m)
@@ -254,7 +254,7 @@ end
         x = randn(T, input_size, batch_size)
         y = W_true * x .+ b_true + randn(T, output_size, batch_size)
 
-        data_iter = Iterators.repeated(((x,), y))
+        data_iter = Iterators.repeated((x, y))
         f = SupervisedObjective(mse, data_iter)
 
         grad, out = ProtoGrad.gradient(f, m)
@@ -307,7 +307,7 @@ end
     x = randn(T, input_size, batch_size)
     y = W_true * x .+ b_true + randn(T, output_size, batch_size)
 
-    data_iter = Iterators.repeated(((x,), y))
+    data_iter = Iterators.repeated((x, y))
     f = ProtoGrad.SupervisedObjective(ProtoGrad.mse, data_iter)
 
     grad, out = ProtoGrad.gradient(f, m)
