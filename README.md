@@ -126,7 +126,7 @@ The following loop is plain gradient descent with constant stepsize:
 m_fit = copy(m)
 for it in 1:100
     grad, _ = ProtoGrad.gradient(objective, m_fit)
-    m_fit .= m_fit .- 0.1 * grad
+    m_fit .= m_fit .- 0.1 .* grad
 end
 ```
 
