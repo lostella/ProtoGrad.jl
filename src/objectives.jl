@@ -1,6 +1,5 @@
-import Base: show
-
-using LinearAlgebra
+using ChainRulesCore
+using Zygote: pullback
 
 mutable struct SupervisedObjective{L, D, I, S}
     loss::L
@@ -15,7 +14,7 @@ mutable struct SupervisedObjective{L, D, I, S}
     end
 end
 
-show(io::IO, mo::T) where T <: SupervisedObjective = print(io, "$T($(mo.loss), $(mo.data_iterable))")
+Base.show(io::IO, mo::T) where T <: SupervisedObjective = print(io, "$T($(mo.loss), $(mo.data_iterable))")
 
 function get_instance_and_update!(f::SupervisedObjective)
     instance, state = f.next_instance, f.next_state
@@ -31,10 +30,8 @@ function (f::SupervisedObjective)(m)
 end
 
 # NOTE we need to explicitly implement this because Zygote doesn't like mutation
-
-function gradient(f::SupervisedObjective, m::Model)
+function ChainRulesCore.rrule(f::SupervisedObjective, m)
     x, y = get_instance_and_update!(f)
-    raw_grad, out = fallback_gradient(m -> f.loss(m(x), y), m)
-    grad = reconstruct(raw_grad, m)
-    return grad, out
+    out, pb = pullback(m -> f.loss(m(x), y), m)
+    return out, c -> (ChainRulesCore.Zero(), pb(c)[1])
 end

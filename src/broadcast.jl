@@ -1,15 +1,13 @@
-import Base: copy, copyto!, axes
-import Base.Broadcast: BroadcastStyle, broadcastable, instantiate
 using Base: RefValue
 using Base.Broadcast: Style, DefaultArrayStyle, Broadcasted, flatten
 
-axes(::Model) = nothing
-broadcastable(m::Model) = m
+Base.axes(::Model) = nothing
+Base.Broadcast.broadcastable(m::Model) = m
 
-BroadcastStyle(::Type{T}) where T <: Model = Style{T}()
-BroadcastStyle(s::Style{T}, ::DefaultArrayStyle{0}) where T <: Model = s
+Base.Broadcast.BroadcastStyle(::Type{T}) where T <: Model = Style{T}()
+Base.Broadcast.BroadcastStyle(s::Style{T}, ::DefaultArrayStyle{0}) where T <: Model = s
 
-instantiate(bc::Broadcasted{Style{T}}) where T <: Model = bc
+Base.Broadcast.instantiate(bc::Broadcasted{Style{T}}) where T <: Model = bc
 
 # The idea here is:
 #   - have a recursive procedure that goes down to the leaves of the struct
@@ -51,7 +49,7 @@ function recursive_copyto!(m::T, f, args) where T <: Model
     end
 end
 
-function copyto!(dest::T, bc::Broadcasted{Style{T}}) where T <: Model
+function Base.copyto!(dest::T, bc::Broadcasted{Style{T}}) where T <: Model
     flat_bc = flatten(bc)
     recursive_copyto!(dest, flat_bc.f, flat_bc.args)
     dest
@@ -64,7 +62,7 @@ find_model(::Tuple{}) = nothing
 find_model(m::Model, rest) = m
 find_model(::Any, rest) = find_model(rest)
 
-function copy(bc::Broadcasted{Style{T}}) where T <: Model
+function Base.copy(bc::Broadcasted{Style{T}}) where T <: Model
     m = find_model(bc)
     dest = similar(m)
     copyto!(dest, bc)
