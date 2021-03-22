@@ -21,11 +21,15 @@ end
 (m::LinearModel)(x) = m.A * x .+ m.b
 ```
 
-The only assumption on models is that their set of attributes is any combination of:
+All attributes of a model are interpreted as parameters to be optimized, and so gradients will be taken with respect to them. It is therefore assumed that all attributes are
 1. Numerical arrays, i.e. of type `<:AbstractArray{<:AbstractFloat}`;
-2. Other `Model` objects;
-3. Functions;
+2. Functions;
+3. Other `Model` objects;
 4. `Tuple`s of objects of the above types.
+
+> **Note:** This means, for example, that hyper-paramenters cannot be stored as attributes.
+> Some hyperparameters are implicit in the model structure (e.g. number of layers or units);
+> otherwise, they can be stored as type parameters (as ["value types"](https://docs.julialang.org/en/v1/manual/types/#%22Value-types%22)).
 
 Models defined this way get the structure of a vector space, for free:
 
@@ -59,7 +63,7 @@ For example, we can use the mean squared error
 mean_squared_error(yhat, y) = sum((yhat .- y).^2) / size(y)[end]
 ```
 
-together with some artificial data (generated according to a random, noisy linear model)
+together with some data (here artificially generated, according to a random, noisy linear model)
 
 ```julia
 A_original = randn(3, 5)
@@ -111,11 +115,6 @@ grad, val = ProtoGrad.gradient(objective, m)
 ```
 
 Here `val` is the value of the objective evaluated at `m`, while `grad` contains its gradient with respect to **all** attributes of `m`. Most importantly **`grad` is itself a `LinearModel` object**. Therefore, `grad` can be added or subtracted from `m`, used in dot products and so on.
-
-> **Note:** All attributes of a `ProtoGrad.Model` object are assumed to be parameters to be optimized, hence gradients will be taken with respect to them.
-> This means, for example, that hyper-paramenters cannot be stored as attributes.
-> Some hyperparameters are implicit in the model structure (e.g. number of layers or units);
-> in any case, they can usually be stored as type parameters (as ["value types"](https://docs.julialang.org/en/v1/manual/types/#%22Value-types%22)).
 
 ## Fitting models to the objective
 
