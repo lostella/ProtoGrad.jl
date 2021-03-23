@@ -1,5 +1,5 @@
 using ProtoGrad
-using ProtoGrad: Model, Frozen, Zero, Linear, Conv, ReLU, relu, softmax, Compose, SupervisedObjective, mse
+using ProtoGrad: Model, Linear, Conv, ReLU, relu, softmax, Compose, SupervisedObjective, mse
 using LinearAlgebra
 using Serialization
 using Test
@@ -267,70 +267,6 @@ end
 
 end
 
-@testset "Frozen" begin
-    T = Float64
-
-    input_size, hidden_size, output_size = 3, 2, 1
-    batch_size = 4
-
-    W1 = randn(T, hidden_size, input_size)
-    b1 = randn(T, hidden_size)
-    m1 = ProtoGrad.Linear(W1, b1)
-
-    W2 = randn(T, hidden_size, hidden_size)
-    b2 = randn(T, hidden_size)
-    m2 = ProtoGrad.Linear(W2, b2)
-
-    W3 = randn(T, output_size, hidden_size)
-    b3 = randn(T, output_size)
-    m3 = ProtoGrad.Linear(W3, b3)
-
-    m = ProtoGrad.Compose(
-        m1,
-        ProtoGrad.ReLU(),
-        m2,
-        x -> ProtoGrad.relu.(x),
-        m3
-    )
-
-    m_frozen = ProtoGrad.Compose(
-        m1,
-        ProtoGrad.ReLU(),
-        ProtoGrad.Frozen(m2),
-        x -> ProtoGrad.relu.(x),
-        m3
-    )
-
-    W_true = randn(T, output_size, input_size)
-    b_true = randn(T, output_size)
-
-    x = randn(T, input_size, batch_size)
-    y = W_true * x .+ b_true + randn(T, output_size, batch_size)
-
-    data_iter = Iterators.repeated((x, y))
-    f = ProtoGrad.SupervisedObjective(ProtoGrad.mse, data_iter)
-
-    grad, out = ProtoGrad.gradient(f, m)
-
-    grad_frozen, out_frozen = ProtoGrad.gradient(f, m_frozen)
-
-    @test out == out_frozen
-
-    @test grad_frozen.layers[1].W == grad.layers[1].W
-    @test grad_frozen.layers[1].b == grad.layers[1].b
-
-    @test typeof(grad_frozen.layers[3]) == ProtoGrad.Zero{typeof(grad.layers[3])}
-
-    @test grad_frozen.layers[5].W == grad.layers[5].W
-    @test grad_frozen.layers[5].b == grad.layers[5].b
-
-    m_frozen_mod = m_frozen - grad_frozen
-
-    @test m_frozen_mod.layers[3].m.W == m_frozen.layers[3].m.W
-    @test m_frozen_mod.layers[3].m.b == m_frozen.layers[3].m.b
-
-end
-
 @testset "Model serde" begin
     for (m, x) in [
         (Linear(Float32, 20=>10), randn(Float32, 20, 4)),
@@ -358,7 +294,9 @@ end
         m_copy = Serialization.deserialize(io)
         close(io)
 
-        @test typeof(m_copy) == typeof(m)
+        # NOTE this is not guaranteed to work
+        # e.g. when local definitions (such as functions) are serialized
+        # @test typeof(m_copy) == typeof(m)
 
         out_copy = m_copy(x)
 

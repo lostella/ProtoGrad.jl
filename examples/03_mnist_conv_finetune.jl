@@ -1,6 +1,6 @@
 using MLDatasets: MNIST
 using Flux: onehotbatch
-using ProtoGrad: Conv, Linear, Compose, maxpool, relu, softmax, Frozen
+using ProtoGrad: Conv, Linear, Compose, maxpool, relu, softmax
 using ProtoGrad: SupervisedObjective, forever, cross_entropy, class_error
 using ProtoGrad: Adam
 using ProgressMeter: @showprogress
@@ -17,10 +17,14 @@ input_model_filename = "./serialized_conv_model"
 println("loading model from $(input_model_filename)")
 m_original = deserialize(input_model_filename)
 
-m = Compose(
-    Frozen(Compose(m_original.layers[1:3])),
-    m_original.layers[4:end]...
-)
+function get_complete_model(m_top)
+    return Compose(
+        m_original.layers[1:3]...,
+        m_top.layers...
+    )
+end
+
+m_top = Compose(m_original.layers[4:end]...)
 
 batch_size = 128
 
@@ -32,19 +36,21 @@ training_batches = (
     for _ in forever
 )
 
-f = SupervisedObjective(cross_entropy, training_batches)
+f = SupervisedObjective(cross_entropy, training_batches) ∘ get_complete_model
 
 optimizer = Adam()
-iterations = Iterators.Stateful(optimizer(m, f))
+iterations = Iterators.Stateful(optimizer(m_top, f))
 
 num_epochs = 5
 num_batches_per_epoch = 500
 
 @showprogress for epoch in 1:num_epochs
     for m_it in Iterators.take(iterations, num_batches_per_epoch)
-        global m = m_it
+        global m_top = m_it
     end
 end
+
+m = get_complete_model(m_top)
 
 model_filename = "./serialized_conv_finetuned_model"
 println("saving model to $(model_filename)")

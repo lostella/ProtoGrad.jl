@@ -1,21 +1,7 @@
 using LinearAlgebra
-using ChainRulesCore
 using Zygote: pullback
 
 abstract type Model end
-
-struct Zero{T} <: Model end
-
-struct Frozen{T} <: Model
-    m::T
-end
-
-(f::Frozen)(x) = f.m(x)
-
-function ChainRulesCore.rrule(f::Frozen{T}, x) where T
-    out, pb = pullback(f.m, x)
-    return out, c -> (Zero{T}(), pb(c)[1])
-end
 
 allfields(m::Model) = [getfield(m, k) for k in fieldnames(typeof(m))]
 
@@ -48,7 +34,6 @@ _similar(f::Function) = f
 _similar(a::AbstractArray) = similar(a)
 _similar(t::Tuple) = _similar.(t)
 _similar(m::T) where T <: Model = T((_similar(f) for f in allfields(m))...)
-_similar(m::Frozen) = copy(m)
 Base.similar(m::Model) = _similar(m)
 
 Base.vec(m::Model) = vcat((vec(p) for p in allparams(m))...)

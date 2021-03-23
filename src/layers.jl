@@ -49,8 +49,8 @@ Conv(num_channels::Pair, filter_size::Tuple) = Conv(Float32, num_channels, filte
 
 # Composition of layers
 
-struct Compose <: Model
-    layers::Tuple
+struct Compose{T <: Tuple} <: Model
+    layers::T
 end
 
 Compose(first, rest...) = Compose((first, rest...))

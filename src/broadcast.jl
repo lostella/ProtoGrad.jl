@@ -32,7 +32,6 @@ function recursive_copyto!(a::AbstractArray, f, args)
 end
 
 recursive_copyto!(f::Function, _, args) = return
-recursive_copyto!(m::Frozen{T}, f, args) where T <: Model = return
 
 function recursive_copyto!(t::Tuple, f, args)
     for (i, el) in Iterators.enumerate(t)
