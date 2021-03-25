@@ -13,9 +13,7 @@ Base.Broadcast.instantiate(bc::Broadcasted{Style{T}}) where T <: Model = bc
 #   - have a recursive procedure that goes down to the leaves of the struct
 #   - where to descend is dictated by the structure of the destination container
 #   - scalars get passed down as they are
-#   - once the leaves (numerical arrays) are reached, just use default broadcasting
-#   - gradient on `::Frozen{T}` returns `Zero{T}()`
-#   - in broadcasting, `::Frozen{T}` blocks the descent
+#   - once the leaves (numerical arrays or functions) are reached, just use default broadcasting
 
 _getindex(a, idx) = getindex(a, idx)
 _getindex(rv::RefValue, idx) = rv
