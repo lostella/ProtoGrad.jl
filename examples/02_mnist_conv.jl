@@ -1,8 +1,8 @@
 using MLDatasets: MNIST
 using Flux: onehotbatch
-using ProtoGrad: Conv, Linear, Compose, maxpool, relu, softmax
-using ProtoGrad: SupervisedObjective, forever, cross_entropy, class_error
-using ProtoGrad: Adam
+using ProtoGrad: Conv, Linear, Dropout, Compose, maxpool, relu, softmax
+using ProtoGrad: SupervisedObjective, cross_entropy, class_error
+using ProtoGrad: Adam, forever, within_training_mode
 using ProgressMeter: @showprogress
 using StatsBase: sample
 using Serialization: serialize, deserialize
@@ -20,17 +20,22 @@ num_classes = 10
 out_conv_size = (div(height, 4) - 3, div(width, 4) - 3, 16)
 
 m = Compose(
+    Dropout(0.1),
     Conv(input_channels=>6, (5, 5)),
     x -> relu.(x),                       # can also use ReLU()
     x -> maxpool(x, (2, 2)),             # can also use MaxPool((2, 2))
+    Dropout(0.1),
     Conv(6=>output_channels, (5, 5)),
     x -> relu.(x),
     x -> maxpool(x, (2, 2)),
     x -> reshape(x, :, size(x, 4)),      # can also use Reshape((...))
+    Dropout(0.1),
     Linear(prod(out_conv_size)=>120),
     x -> relu.(x),
+    Dropout(0.1),
     Linear(120=>84),
     x -> relu.(x),
+    Dropout(0.1),
     Linear(84=>num_classes),
     softmax,
 )
@@ -53,9 +58,11 @@ iterations = Iterators.Stateful(optimizer(m, f))
 num_epochs = 20
 num_batches_per_epoch = 500
 
-@showprogress for epoch in 1:num_epochs
-    for m_it in Iterators.take(iterations, num_batches_per_epoch)
-        global m = m_it
+within_training_mode() do
+    @showprogress for epoch in 1:num_epochs
+        for m_it in Iterators.take(iterations, num_batches_per_epoch)
+            global m = m_it
+        end
     end
 end
 

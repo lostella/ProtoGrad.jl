@@ -1,8 +1,8 @@
 using MLDatasets: MNIST
 using Flux: onehotbatch
-using ProtoGrad: Linear, Compose, relu, softmax
-using ProtoGrad: SupervisedObjective, cross_entropy, class_error, forever
-using ProtoGrad: GradientDescent
+using ProtoGrad: Linear, Dropout, Compose, relu, softmax
+using ProtoGrad: SupervisedObjective, cross_entropy, class_error
+using ProtoGrad: GradientDescent, forever, within_training_mode
 using ProgressMeter: @showprogress
 using StatsBase: sample
 using Serialization: serialize, deserialize
@@ -18,8 +18,10 @@ hidden_size = 100
 num_classes = 10
 
 m = Compose(
+    Dropout(0.1),
     Linear(input_size=>hidden_size),
     x -> relu.(x),
+    Dropout(0.1),
     Linear(hidden_size=>num_classes),
     softmax,
 )
@@ -42,9 +44,11 @@ iterations = Iterators.Stateful(optimizer(m, f))
 num_epochs = 100
 num_batches_per_epoch = 500
 
-@showprogress for epoch in 1:num_epochs
-    for m_it in Iterators.take(iterations, num_batches_per_epoch)
-        global m = m_it
+within_training_mode() do
+    @showprogress for epoch in 1:num_epochs
+        for m_it in Iterators.take(iterations, num_batches_per_epoch)
+            global m = m_it
+        end
     end
 end
 

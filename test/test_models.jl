@@ -1,5 +1,5 @@
 using ProtoGrad
-using ProtoGrad: Model, Linear, Conv, ReLU, relu, softmax, Compose, SupervisedObjective, mse
+using ProtoGrad: Model, Linear, Conv, ReLU, relu, softmax, Dropout, Compose, SupervisedObjective, mse
 using LinearAlgebra
 using Serialization
 using Test
@@ -265,6 +265,30 @@ end
         m .= m .- 3.0 .* grad
     end
 
+end
+
+@testset "Dropout" begin
+    for T in [Float32, Float64]
+        input_size, hidden_size, output_size = 1000, 50, 1
+        batch_size = 64
+
+        m = ProtoGrad.Dropout(0.1)
+
+        x = randn(T, input_size, batch_size)
+        y = randn(T, output_size, batch_size)
+
+        data_iter = Iterators.repeated((x, y))
+        f = model -> ProtoGrad.mse(model(x), y)
+
+        grad, out = ProtoGrad.within_training_mode() do
+            ProtoGrad.gradient(f, m)
+        end
+
+        @test typeof(out) <: Number  # TODO improve this assertion
+        @test typeof(grad) == typeof(m)
+
+        m .= m .- 3.0 .* grad
+    end
 end
 
 @testset "Model serde" begin

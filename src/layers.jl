@@ -1,4 +1,5 @@
 using NNlib: conv, maxpool, meanpool, relu, softmax
+using ChainRulesCore
 
 # Initialization utils
 
@@ -92,3 +93,36 @@ struct Reshape{S} <: Model end
 Reshape(s) = Reshape{s}()
 
 (r::Reshape{S})(x) where S = reshape(x, S)
+
+# Dropout
+
+_dropout_shape(s, ::Colon) = size(s)
+_dropout_shape(s, dims) = tuple((i in dims ? si : 1 for (i, si) in enumerate(size(s)))...)
+
+function _dropout_mask(x::AbstractArray{T}, p; dims=:) where T
+    y = rand(eltype(x), _dropout_shape(x, dims)...)
+    y .= ifelse.(y .> p, T(1/(1 - p)), T(0))
+    return y
+end
+
+function dropout(x, p; dims=:)
+    if !is_training_mode()
+        return x
+    end
+    y = _dropout_mask(x, p, dims=dims)
+    return x .* y
+end
+
+function ChainRulesCore.rrule(::typeof(dropout), x, p; dims=:)
+    if !is_training_mode()
+        return x, c -> (ChainRulesCore.NO_FIELDS, c, ChainRulesCore.Zero())
+    end
+    y = _dropout_mask(x, p, dims=dims)
+    return x .* y, c -> (ChainRulesCore.NO_FIELDS, c .* y, ChainRulesCore.Zero())
+end
+
+struct Dropout{P, D} <: Model end
+
+Dropout(p, dims=:) = Dropout{p, dims}()
+
+(d::Dropout{P, D})(x) where {P, D} = dropout(x, P, dims=D)

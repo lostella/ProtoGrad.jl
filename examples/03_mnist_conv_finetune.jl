@@ -1,8 +1,8 @@
 using MLDatasets: MNIST
 using Flux: onehotbatch
-using ProtoGrad: Conv, Linear, Compose, maxpool, relu, softmax
-using ProtoGrad: SupervisedObjective, forever, cross_entropy, class_error
-using ProtoGrad: Adam
+using ProtoGrad: Conv, Linear, Dropout, Compose, maxpool, relu, softmax
+using ProtoGrad: SupervisedObjective, cross_entropy, class_error
+using ProtoGrad: Adam, forever, within_training_mode
 using ProgressMeter: @showprogress
 using StatsBase: sample
 using Serialization: serialize, deserialize
@@ -19,12 +19,12 @@ m_original = deserialize(input_model_filename)
 
 function get_complete_model(m_top)
     return Compose(
-        m_original.layers[1:3]...,
+        m_original.layers[1:end-3]...,
         m_top.layers...
     )
 end
 
-m_top = Compose(m_original.layers[4:end]...)
+m_top = Compose(m_original.layers[end-2:end]...)
 
 batch_size = 128
 
@@ -44,9 +44,11 @@ iterations = Iterators.Stateful(optimizer(m_top, f))
 num_epochs = 5
 num_batches_per_epoch = 500
 
-@showprogress for epoch in 1:num_epochs
-    for m_it in Iterators.take(iterations, num_batches_per_epoch)
-        global m_top = m_it
+within_training_mode() do
+    @showprogress for epoch in 1:num_epochs
+        for m_it in Iterators.take(iterations, num_batches_per_epoch)
+            global m_top = m_it
+        end
     end
 end
 
