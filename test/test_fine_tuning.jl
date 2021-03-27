@@ -43,8 +43,8 @@ using Test
 
     m2_final = nothing
 
-    for m2_it in Iterators.take(optimizer(m2, f), 10)
-        m2_final = m2_it
+    for output in Iterators.take(optimizer(m2, f), 10)
+        m2_final = output.model
     end
 
     @test m2_final.W != m2_orig.W

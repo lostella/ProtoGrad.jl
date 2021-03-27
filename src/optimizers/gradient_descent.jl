@@ -26,14 +26,14 @@ function Base.iterate(iter::GradientDescentIterable)
     state = GradientDescentState(
         w, f_w, grad_f_w, Iterators.Stateful(iter.stepsize)
     )
-    return state.w, state
+    return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
 function Base.iterate(iter::GradientDescentIterable, state::GradientDescentState)
     stepsize = popfirst!(state.stepsize_iterator)
     state.w .-= stepsize .* state.grad_f_w
     state.grad_f_w, state.f_w = gradient(iter.f, state.w)
-    return state.w, state
+    return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
 struct GradientDescent

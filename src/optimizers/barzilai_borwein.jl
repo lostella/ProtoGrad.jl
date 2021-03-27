@@ -23,7 +23,7 @@ function Base.iterate(iter::BarzilaiBorweinIterable)
     state = BarzilaiBorweinState(
         w, f_w, grad_f_w, iter.alpha
     )
-    return state.w, state
+    return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
 function Base.iterate(iter::BarzilaiBorweinIterable, state::BarzilaiBorweinState)
@@ -32,7 +32,7 @@ function Base.iterate(iter::BarzilaiBorweinIterable, state::BarzilaiBorweinState
     y .-= state.grad_f_w
     state.stepsize *= -dot(state.grad_f_w, state.grad_f_w) / dot(state.grad_f_w, y)
     state.grad_f_w .+= y
-    return state.w, state
+    return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
 struct BarzilaiBorwein

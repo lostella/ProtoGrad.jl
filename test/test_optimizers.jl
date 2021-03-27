@@ -33,11 +33,11 @@ using Test
 
             @test Base.IteratorSize(typeof(seq)) == Base.IsInfinite()
 
-            for (it, m_it) in enumerate(seq)
+            for (it, output) in enumerate(seq)
                 if it >= 1000
-                    @test typeof(m_it) == typeof(m)
-                    @test isapprox(m_it.W, W_true, rtol=5e-2)
-                    @test isapprox(m_it.b, b_true, rtol=5e-2)
+                    @test typeof(output.model) == typeof(m)
+                    @test isapprox(output.model.W, W_true, rtol=5e-2)
+                    @test isapprox(output.model.b, b_true, rtol=5e-2)
                     break
                 end
             end
@@ -56,8 +56,8 @@ using Test
             m0 = copy(m)
             seq = optimizer(m0, f)
 
-            for m_it in Iterators.take(seq, 5)
-                @test typeof(m_it) == typeof(m)
+            for output in Iterators.take(seq, 5)
+                @test typeof(output.model) == typeof(m)
             end
         end
     end

@@ -34,7 +34,7 @@ function Base.iterate(iter::AdamIterable)
         w, f_w, grad_f_w, Iterators.Stateful(iter.stepsize),
         zero(w), zero(w), iter.beta1, iter.beta2
     )
-    return state.w, state
+    return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
 function Base.iterate(iter::AdamIterable, state::AdamState)
@@ -46,7 +46,7 @@ function Base.iterate(iter::AdamIterable, state::AdamState)
     state.beta1t *= iter.beta1
     state.beta2t *= iter.beta2
     state.grad_f_w, state.f_w = gradient(iter.f, state.w)
-    return state.w, state
+    return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
 struct Adam

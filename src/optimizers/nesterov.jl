@@ -30,7 +30,7 @@ function Base.iterate(iter::NesterovIterable)
         w, f_w, grad_f_w, Iterators.Stateful(iter.stepsize),
         copy(w), zero(w), 1.0
     )
-    return state.w, state
+    return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
 function Base.iterate(iter::NesterovIterable, state::NesterovState)
@@ -42,7 +42,7 @@ function Base.iterate(iter::NesterovIterable, state::NesterovState)
     state.z_prev, state.z = state.z, state.z_prev
     state.grad_f_w, state.f_w = gradient(iter.f, state.w)
     state.z .= state.w .- stepsize .* state.grad_f_w
-    return state.w, state
+    return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
 struct Nesterov
