@@ -265,6 +265,26 @@ end
         m .= m .- 3.0 .* grad
     end
 
+    @testset "Recurrent + Linear ($(T))" for T in [Float32, Float64]
+        m = Compose(
+            ProtoGrad.RNN(T, 3=>4, relu),
+            Linear(4=>1)
+        )
+
+        x = randn(3, 20, 8)
+        y = randn(1, 20, 8)
+
+        data_iter = Iterators.repeated((x, y))
+        f = SupervisedObjective(mse, data_iter)
+
+        grad, out = ProtoGrad.gradient(f, m)
+
+        @test typeof(out) <: Number  # TODO improve this assertion
+        @test typeof(grad) == typeof(m)
+
+        m .= m .- 3.0 .* grad
+    end
+
 end
 
 @testset "Dropout" begin

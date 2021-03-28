@@ -48,6 +48,77 @@ Conv(num_channels::Pair, filter_size::Tuple) = Conv(Float32, num_channels, filte
 
 (c::Conv)(x) = conv(x, c.w) .+ c.b
 
+# Recurrent layers
+
+struct Unroll{C, I, S}
+    cell::C
+    input_sequence::I
+    initial_state::S
+end
+
+Base.length(itr::Unroll) = length(itr.input_sequence)
+
+function Base.iterate(itr::Unroll, state=(itr.input_sequence, itr.initial_state))
+    remaining_inputs, cell_state = state
+    p = iterate(remaining_inputs)
+    if p === nothing
+        return nothing
+    end
+    next_input, inputs_state = p
+    output, cell_state = itr.cell(next_input, cell_state)
+    return output, (Iterators.rest(remaining_inputs, inputs_state), cell_state)
+end
+
+struct RecurrentLayer{axis, C, S} <: Model
+    cell::C
+    state_initializer::S
+end
+
+RecurrentLayer(cell::C, state_initializer::S; axis) where {C, S} = RecurrentLayer{axis, C, S}(cell, state_initializer)
+
+_split_view_indexes(k, axis, ndims) = tuple((i == axis ? k : Colon() for i in 1:ndims)...)
+
+split(x, axis) = [view(x, _split_view_indexes(k, axis, ndims(x))...) for k in 1:size(x, axis)]
+
+_stack_reshape_size(axis, sz) = tuple((i == axis ? 1 : (i < axis ? sz[i] : sz[i-1]) for i in 1:length(sz)+1)...)
+
+stack(xs, axis) = cat((reshape(x, _stack_reshape_size(axis, size(xs[1]))) for x in xs)..., dims=axis)
+
+function (m::RecurrentLayer{axis})(x) where axis
+    xs = split(x, axis)
+    outputs = collect(Unroll(m.cell, xs, m.state_initializer()))
+    return stack(outputs, axis)
+end
+
+struct RNNCell{M, V, A} <: Model
+    Wi::M
+    Wh::M
+    b::V
+    act::A
+end
+
+function (cell::RNNCell)(x, h)
+    size_x = size(x)
+    x_reshaped = reshape(x, size_x[1], :)
+    h = cell.act.(cell.Wi * x_reshaped .+ cell.Wh * h .+ cell.b)
+    return reshape(h, :, size_x[2:end]...), h
+end
+
+function RNNCell(T::Type, dims::Pair, act)
+    Wi = xavier_uniform(T, dims[2], dims[1], fan_in=dims[1], fan_out=dims[2])
+    Wh = xavier_uniform(T, dims[2], dims[2], fan_in=dims[2], fan_out=dims[2])
+    b = zeros(T, dims[2])
+    return RNNCell(Wi, Wh, b, act)
+end
+
+RNNCell(args...; kwargs...) = RNNCell(Float32, args...; kwargs...)
+
+RNN(T::Type, dims::Pair, act; axis=2) = RecurrentLayer(RNNCell(T, dims, act), () -> zeros(T, dims[2]), axis=axis)
+
+RNN(args...; kwargs...) = RNN(Float32, args...; kwargs...)
+
+# TODO *immediately* test whether gradients work OK with this
+
 # Composition of layers
 
 struct Compose{T <: Tuple} <: Model
