@@ -28,13 +28,10 @@ m_top = Compose(m_original.layers[end-2:end]...)
 
 batch_size = 128
 
-training_batches = (
-    begin
-        idx = sample(1:size(train_x_with_channel)[end], batch_size, replace = false)
-        (train_x_with_channel[:, :, :, idx], train_y_onehot[:, idx])
-    end
-    for _ in forever
-)
+training_batches = forever() do
+    idx = sample(1:size(train_x_with_channel)[end], batch_size, replace = false)
+    return (train_x_with_channel[:, :, :, idx], train_y_onehot[:, idx])
+end
 
 f = SupervisedObjective(cross_entropy, training_batches) ∘ get_complete_model
 

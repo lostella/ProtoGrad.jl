@@ -1,8 +1,5 @@
 module ProtoGrad
 
-# this allows to write `for _ in forever` e.g. in generator expressions
-const forever = Iterators.repeated(nothing)
-
 _training_mode = false
 
 is_training_mode() = _training_mode
@@ -15,6 +12,7 @@ function within_training_mode(f)
     return ret
 end
 
+include("itertools.jl")
 include("losses.jl")
 include("model.jl")
 include("layers.jl")

@@ -77,7 +77,7 @@ to define the objective:
 ```julia
 objective = model -> mean_squared_error(model(x), y)
 
-objective(m) # returns some large number
+objective(m) # returns some "large" number
 ```
 
 Stochastic approximations to the full-data objective above can be implemented by iterating the data in batches, and coupling it with the loss, as follows:
@@ -86,13 +86,10 @@ Stochastic approximations to the full-data objective above can be implemented by
 using StatsBase
 
 batch_size = 64
-batches = (
-    begin
-        idx = sample(1:size(x)[end], batch_size, replace = false)
-        (x[:, idx], y[:, idx])
-    end
-    for _ in ProtoGrad.forever
-)
+batches = ProtoGrad.forever() do
+    idx = sample(1:size(x)[end], batch_size, replace = false)
+    return (x[:, idx], y[:, idx])
+end
 
 stochastic_objective = ProtoGrad.SupervisedObjective(mean_squared_error, batches)
 ```
@@ -139,12 +136,11 @@ ProtoGrad implements gradient descent and other optimization algorithms in the f
 
 ```julia
 optimizer = ProtoGrad.GradientDescent(stepsize=1e-1)
-iterations = optimizer(m, objective)
+iterations = Iterators.take(optimizer(m, objective), 100)
 ```
 
-The `iterations` object is an iterator that can be looped over, and its elements be inspected (for example to decide when to stop training). For the sake of compactness, here we will just take a predefined iteration as solution: 
+The `iterations` object is an iterator that can be looped over, and its elements be inspected (for example to decide when to stop training). For the sake of compactness, here we will just take the output of the last iteration as solution: 
 
 ```julia
-# NOTE: this is just compact, but not memory efficient
-m_fit = collect(Iterators.take(iterations, 100))[end]
+m_fit = ProtoGrad.last(iterations).model
 ```
