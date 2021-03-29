@@ -46,7 +46,10 @@ Base.zero(m::Model) = _zero(m)
 
 _dot(::F, ::F) where F <: Function = 0
 _dot(a1::AbstractArray, a2::AbstractArray) = dot(a1, a2)
-_dot(m1::T, m2::T) where T <: Model = sum((_dot(a1, a2) for (a1, a2) in zip(allfields(m1), allfields(m2))))
+_dot(m1::T, m2::T) where T <: Model = begin
+    fields_m1 = allfields(m1)
+    return length(fields_m1) == 0 ? 0 : sum((_dot(a1, a2) for (a1, a2) in zip(fields_m1, allfields(m2))))
+end
 _dot(t1::Tuple, t2::Tuple) = sum(_dot.(t1, t2))
 LinearAlgebra.dot(m1::T, m2::T) where T <: Model = _dot(m1, m2)
 
