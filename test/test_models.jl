@@ -4,167 +4,85 @@ using LinearAlgebra
 using Serialization
 using Test
 
-@testset "Model operations" begin
-    @testset "Broadcast ($(T))" for T in [Float32, Float64]
-        struct ModelA <: Model
-            attr1
-            attr2
-        end
+@testset "Model operations ($(T))" for T in [Float32, Float64]
+    @testset "$(name)" for (name, m) in [
+        ("Linear", Linear(T, 3=>2)),
+        ("Compose", Compose(Linear(T, 4=>3), ReLU(), Linear(T, 3=>2), x -> relu.(x)))
+    ]
+        vec_m = vec(m)
 
-        n = 3
+        @test eltype(vec_m) == T
 
-        objA = ModelA(ones(T, n), ones(T, n))
+        res = m + m
+        @test typeof(res) == typeof(m)
+        vec_res = vec(res)
+        @test eltype(vec_res) == T
+        @test vec_res == vec_m + vec_m
 
-        @test vec(objA) == ones(T, 2*n)
+        res .= m .+ m
+        @test typeof(res) == typeof(m)
+        vec_res = vec(res)
+        @test eltype(vec_res) == T
+        @test vec_res == vec_m + vec_m
 
-        destA = objA + objA
-        @test typeof(destA) == typeof(objA)
-        @test vec(destA) == vec(objA) + vec(objA)
+        res = m - m
+        @test typeof(res) == typeof(m)
+        vec_res = vec(res)
+        @test eltype(vec_res) == T
+        @test vec_res == vec_m - vec_m
 
-        destA .= objA .+ objA
-        @test typeof(destA) == typeof(objA)
-        @test vec(destA) == vec(objA) + vec(objA)
+        res .= m .- m
+        @test typeof(res) == typeof(m)
+        vec_res = vec(res)
+        @test eltype(vec_res) == T
+        @test vec_res == vec_m - vec_m
 
-        destA = 2 * objA
-        @test typeof(destA) == typeof(objA)
-        @test vec(destA) == 2 * vec(objA)
+        res = 2 * m
+        @test typeof(res) == typeof(m)
+        vec_res = vec(res)
+        @test eltype(vec_res) == T
+        @test vec_res == 2 * vec_m
 
-        destA .= 2 .* objA
-        @test typeof(destA) == typeof(objA)
-        @test vec(destA) == 2 * vec(objA)
+        res .= 2 .* m
+        @test typeof(res) == typeof(m)
+        vec_res = vec(res)
+        @test eltype(vec_res) == T
+        @test vec_res == 2 * vec_m
 
-        struct ModelB{M <: Model} <: Model
-            model::M
-        end
+        res = m / 3
+        @test typeof(res) == typeof(m)
+        vec_res = vec(res)
+        @test eltype(vec_res) == T
+        @test vec_res == vec_m / 3
 
-        objB = ModelB(ModelA(ones(T, n), ones(T, n)))
+        res .= m ./ 3
+        @test typeof(res) == typeof(m)
+        vec_res = vec(res)
+        @test eltype(vec_res) == T
+        @test vec_res == vec_m / 3
 
-        @test vec(objB) == ones(T, 2*n)
+        mp1 = m .+ 1
+        dot_m_mp1 = dot(m, mp1)
+        @test typeof(dot_m_mp1) == T
+        @test dot_m_mp1 ≈ dot(vec_m, vec(mp1))
 
-        destB = objB + objB
-        @test typeof(destB) == typeof(objB)
-        @test vec(destB) == vec(objB) + vec(objB)
+        mcopy = copy(m)
+        @test typeof(mcopy) == typeof(m)
+        vec_mcopy = vec(mcopy)
+        @test eltype(vec_mcopy) == T
+        @test vec_mcopy == vec_m
 
-        destB .= objB .+ objB
-        @test typeof(destB) == typeof(objB)
-        @test vec(destB) == vec(objB) + vec(objB)
+        msimilar = similar(m)
+        @test typeof(msimilar) == typeof(m)
+        vec_msimilar = vec(msimilar)
+        @test eltype(vec_msimilar) == T
 
-        destB = 2 * objB
-        @test typeof(destB) == typeof(objB)
-        @test vec(destB) == 2 * vec(objB)
-
-        destB .= 2 .* objB
-        @test typeof(destB) == typeof(objB)
-        @test vec(destB) == 2 * vec(objB)
-
-        # TODO broadcast doesn't work with the following
-        # TODO need to figure out why
-
-        # struct ModelC <: Model
-        #     models::Tuple
-        # end
-
-        # objC = ModelC((
-        #     ModelA(ones(n), ones(n)),
-        #     ModelB(ModelA(ones(n), ones(n))),
-        # ))
-
-        # @test vec(objC) == ones(4*n)
-
-        # destC = objC .+ objC
-        # @test typeof(destC) == typeof(objC)
-        # @test vec(destC) == vec(objC) + vec(objC)
-
-        # destC .= objC .+ objC
-        # @test typeof(destC) == typeof(objC)
-        # @test vec(destC) == vec(objC) + vec(objC)
-
-        # destC = 2 .* objC
-        # @test typeof(destC) == typeof(objC)
-        # @test vec(destC) == 2 * vec(objC)
-
-        # destC .= 2 .* objC
-        # @test typeof(destC) == typeof(objC)
-        # @test vec(destC) == 2 * vec(objC)    
+        mzero = zero(m)
+        @test typeof(mzero) == typeof(m)
+        vec_mzero = vec(mzero)
+        @test eltype(vec_mzero) == T
+        @test all(vec_mzero .== T(0))
     end
-
-    @testset "Linear ($(T))" for T in [Float32, Float64]
-        W1 = randn(T, 1, 10)
-        b1 = randn(T, 1)
-        m1 = Linear(W1, b1)
-
-        @test typeof(vec(m1)) == Vector{T}
-
-        W2 = randn(T, 1, 10)
-        b2 = randn(T, 1)
-        m2 = Linear(W2, b2)
-
-        m_sum = m1 + m2
-        @test typeof(m_sum) == typeof(m1)
-        @test vec(m_sum) == vec(m1) + vec(m2)
-
-        m_diff = m1 .- m2
-        @test typeof(m_diff) == typeof(m1)
-        @test vec(m_diff) == vec(m1) - vec(m2)
-
-        m_scaled1 = 3 * m1
-        @test typeof(m_scaled1) == typeof(m1)
-        @test vec(m_scaled1) == 3 * vec(m1)
-
-        m_scaled2 = m1 * 4
-        @test typeof(m_scaled2) == typeof(m1)
-        @test vec(m_scaled2) == vec(m1) * 4
-
-        m_scaled3 = m1 / 5
-        @test typeof(m_scaled3) == typeof(m1)
-        @test vec(m_scaled3) == vec(m1) / 5
-    end
-
-    @testset "Compose ($(T))" for T in [Float32, Float64]
-        W1 = randn(T, 4, 10)
-        b1 = randn(T, 4)
-        m1 = Linear(W1, b1)
-
-        W2 = randn(T, 2, 4)
-        b2 = randn(T, 2)
-        m2 = Linear(W2, b2)
-
-        m = Compose(m1, ReLU(), m2, x -> relu.(x))
-
-        @test typeof(vec(m)) == Vector{T}
-
-        x = randn(T, 10, 16)
-        y = m(x)
-
-        @test size(y) == (2, 16)
-        @test all(y .>= 0)
-
-        m_sum = m + m
-        @test typeof(m_sum) == typeof(m)
-        @test vec(m_sum) == vec(m) + vec(m)
-        @test size(m_sum(x)) == (2, 16)
-
-        m_diff = m - m
-        @test typeof(m_diff) == typeof(m)
-        @test vec(m_diff) == vec(m) - vec(m)
-        @test size(m_diff(x)) == (2, 16)
-
-        m_scaled1 = 3 * m
-        @test typeof(m_scaled1) == typeof(m)
-        @test vec(m_scaled1) == 3 * vec(m)
-        @test size(m_scaled1(x)) == (2, 16)
-
-        m_scaled2 = m * 4
-        @test typeof(m_scaled2) == typeof(m)
-        @test vec(m_scaled2) == vec(m) * 4
-        @test size(m_scaled2(x)) == (2, 16)
-
-        m_scaled3 = m / 5
-        @test typeof(m_scaled3) == typeof(m)
-        @test vec(m_scaled3) == vec(m) / 5
-        @test size(m_scaled3(x)) == (2, 16)
-    end
-
 end
 
 @testset "Model gradient" begin

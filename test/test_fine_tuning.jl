@@ -1,24 +1,12 @@
 using ProtoGrad
 using Test
 
-@testset "Model fine-tuning" begin
-    T = Float64
-
+@testset "Fine-tuning ($(T))" for T in [Float32, Float64]
     input_size, hidden_size, output_size = 3, 2, 1
     batch_size = 4
 
-    W1 = randn(T, hidden_size, input_size)
-    b1 = randn(T, hidden_size)
-    m1 = ProtoGrad.Linear(W1, b1)
-
-    W2 = randn(T, hidden_size, hidden_size)
-    b2 = randn(T, hidden_size)
-    m2 = ProtoGrad.Linear(W2, b2)
-    m2_orig = copy(m2)
-
-    W3 = randn(T, output_size, hidden_size)
-    b3 = randn(T, output_size)
-    m3 = ProtoGrad.Linear(W3, b3)
+    m1 = ProtoGrad.Linear(T, input_size=>hidden_size)
+    m3 = ProtoGrad.Linear(T, hidden_size=>output_size)
 
     function get_complete_model(b)
         ProtoGrad.Compose(
@@ -29,6 +17,9 @@ using Test
             m3
         )
     end
+
+    m2 = ProtoGrad.Linear(T, hidden_size=>hidden_size)
+    m2_orig = copy(m2)
 
     W_true = randn(T, output_size, input_size)
     b_true = randn(T, output_size)
