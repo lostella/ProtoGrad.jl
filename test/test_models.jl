@@ -4,88 +4,90 @@ using LinearAlgebra
 using Serialization
 using Test
 
-@testset "Model operations ($(T))" for T in [Float32, Float64]
-    @testset "$(name)" for (name, m) in [
-        ("Linear", Linear(T, 3=>2)),
-        ("Compose", Compose(Linear(T, 4=>3), ReLU(), Linear(T, 3=>2), x -> relu.(x)))
-    ]
-        vec_m = vec(m)
+@testset "Basic operations" begin
+    @testset "$(T)" for T in [Float16, Float32, Float64]
+        @testset "$(name)" for (name, m) in [
+            ("Linear", Linear(T, 3=>2)),
+            ("Compose", Compose(Linear(T, 4=>3), ReLU(), Linear(T, 3=>2), x -> relu.(x)))
+        ]
+            vec_m = vec(m)
 
-        @test eltype(vec_m) == T
+            @test eltype(vec_m) == T
 
-        res = m + m
-        @test typeof(res) == typeof(m)
-        vec_res = vec(res)
-        @test eltype(vec_res) == T
-        @test vec_res == vec_m + vec_m
+            res = m + m
+            @test typeof(res) == typeof(m)
+            vec_res = vec(res)
+            @test eltype(vec_res) == T
+            @test vec_res == vec_m + vec_m
 
-        res .= m .+ m
-        @test typeof(res) == typeof(m)
-        vec_res = vec(res)
-        @test eltype(vec_res) == T
-        @test vec_res == vec_m + vec_m
+            res .= m .+ m
+            @test typeof(res) == typeof(m)
+            vec_res = vec(res)
+            @test eltype(vec_res) == T
+            @test vec_res == vec_m + vec_m
 
-        res = m - m
-        @test typeof(res) == typeof(m)
-        vec_res = vec(res)
-        @test eltype(vec_res) == T
-        @test vec_res == vec_m - vec_m
+            res = m - m
+            @test typeof(res) == typeof(m)
+            vec_res = vec(res)
+            @test eltype(vec_res) == T
+            @test vec_res == vec_m - vec_m
 
-        res .= m .- m
-        @test typeof(res) == typeof(m)
-        vec_res = vec(res)
-        @test eltype(vec_res) == T
-        @test vec_res == vec_m - vec_m
+            res .= m .- m
+            @test typeof(res) == typeof(m)
+            vec_res = vec(res)
+            @test eltype(vec_res) == T
+            @test vec_res == vec_m - vec_m
 
-        res = 2 * m
-        @test typeof(res) == typeof(m)
-        vec_res = vec(res)
-        @test eltype(vec_res) == T
-        @test vec_res == 2 * vec_m
+            res = 2 * m
+            @test typeof(res) == typeof(m)
+            vec_res = vec(res)
+            @test eltype(vec_res) == T
+            @test vec_res == 2 * vec_m
 
-        res .= 2 .* m
-        @test typeof(res) == typeof(m)
-        vec_res = vec(res)
-        @test eltype(vec_res) == T
-        @test vec_res == 2 * vec_m
+            res .= 2 .* m
+            @test typeof(res) == typeof(m)
+            vec_res = vec(res)
+            @test eltype(vec_res) == T
+            @test vec_res == 2 * vec_m
 
-        res = m / 3
-        @test typeof(res) == typeof(m)
-        vec_res = vec(res)
-        @test eltype(vec_res) == T
-        @test vec_res == vec_m / 3
+            res = m / 3
+            @test typeof(res) == typeof(m)
+            vec_res = vec(res)
+            @test eltype(vec_res) == T
+            @test vec_res == vec_m / 3
 
-        res .= m ./ 3
-        @test typeof(res) == typeof(m)
-        vec_res = vec(res)
-        @test eltype(vec_res) == T
-        @test vec_res == vec_m / 3
+            res .= m ./ 3
+            @test typeof(res) == typeof(m)
+            vec_res = vec(res)
+            @test eltype(vec_res) == T
+            @test vec_res == vec_m / 3
 
-        mp1 = m .+ 1
-        dot_m_mp1 = dot(m, mp1)
-        @test typeof(dot_m_mp1) == T
-        @test dot_m_mp1 ≈ dot(vec_m, vec(mp1))
+            mp1 = m .+ 1
+            dot_m_mp1 = dot(m, mp1)
+            @test typeof(dot_m_mp1) == T
+            @test dot_m_mp1 ≈ dot(vec_m, vec(mp1))
 
-        mcopy = copy(m)
-        @test typeof(mcopy) == typeof(m)
-        vec_mcopy = vec(mcopy)
-        @test eltype(vec_mcopy) == T
-        @test vec_mcopy == vec_m
+            mcopy = copy(m)
+            @test typeof(mcopy) == typeof(m)
+            vec_mcopy = vec(mcopy)
+            @test eltype(vec_mcopy) == T
+            @test vec_mcopy == vec_m
 
-        msimilar = similar(m)
-        @test typeof(msimilar) == typeof(m)
-        vec_msimilar = vec(msimilar)
-        @test eltype(vec_msimilar) == T
+            msimilar = similar(m)
+            @test typeof(msimilar) == typeof(m)
+            vec_msimilar = vec(msimilar)
+            @test eltype(vec_msimilar) == T
 
-        mzero = zero(m)
-        @test typeof(mzero) == typeof(m)
-        vec_mzero = vec(mzero)
-        @test eltype(vec_mzero) == T
-        @test all(vec_mzero .== T(0))
+            mzero = zero(m)
+            @test typeof(mzero) == typeof(m)
+            vec_mzero = vec(mzero)
+            @test eltype(vec_mzero) == T
+            @test all(vec_mzero .== T(0))
+        end
     end
 end
 
-@testset "Model gradient" begin
+@testset "Gradient" begin
     @testset "Linear ($(T))" for T in [Float32, Float64]
         input_size, output_size = 1000, 1
         batch_size = 50
@@ -209,7 +211,7 @@ end
     end
 end
 
-@testset "Model serde" begin
+@testset "Serde" begin
     for (m, x) in [
         (Linear(Float32, 20=>10), randn(Float32, 20, 4)),
         (Linear(Float64, 20=>10), randn(Float64, 20, 4)),

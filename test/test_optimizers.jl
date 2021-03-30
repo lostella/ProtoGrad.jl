@@ -4,7 +4,37 @@ using ProtoGrad: GradientDescent, Nesterov, BarzilaiBorwein, Adam
 using LinearAlgebra
 using Test
 
-@testset "Optimizers" begin
+using Base.Iterators: take
+using ProtoGrad
+using LinearAlgebra
+using Test
+
+@testset "Quadratic objective" begin
+    Q = Diagonal([1e1, 1e-1, 1e0, 1e0, 1e0, 1e0, 1e0, 1e0, 1e0, 1e0])
+    q = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+
+    objective = x -> 0.5*dot(x, Q*x) + dot(x, q)
+
+    x_star = -Q\q
+    f_star = objective(x_star)
+
+    w0 = zeros(10)
+
+    max_iter = 1000
+
+    @testset "$(name)" for (name, optimizer) in [
+        "GradientDescent" => ProtoGrad.GradientDescent(stepsize=1/opnorm(Q)),
+        "Nesterov" => ProtoGrad.Nesterov(stepsize=1/opnorm(Q)),
+        "Adam" => ProtoGrad.Adam(stepsize=1e-1, beta1=0.9, beta2=0.999, epsilon=1e-8),
+    ]
+        iterations = take(optimizer(w0, objective), max_iter)
+        solution = ProtoGrad.last(iterations).model
+
+        @test objective(solution) <= f_star + 0.01 * abs(f_star)
+    end
+end
+
+@testset "Supervised objective" begin
 
     @testset "Linear ($(T))" for T in [Float32, Float64]
 
