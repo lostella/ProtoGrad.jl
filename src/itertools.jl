@@ -12,3 +12,13 @@ function last(itr)
     end
     return output
 end
+
+mutable struct Settable{T}
+    v::T
+end
+
+set!(b::Settable{T}, v) where T = (b.v = v)
+
+Base.IteratorSize(::Type{<:Settable}) = Base.IsInfinite()
+
+Base.iterate(b::Settable, state=nothing) = b.v, nothing

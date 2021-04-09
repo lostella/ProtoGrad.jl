@@ -8,6 +8,16 @@ using Test
     ]
         @test ProtoGrad.last(itr) == exp
     end
+
+    @testset "Settable" begin
+        v = 0.0
+        b = ProtoGrad.Settable(v)
+        for value in Iterators.take(b, 10)
+            @test value == v
+            v = rand()
+            ProtoGrad.set!(b, v)
+        end
+    end
 end
 
 @testset "Training mode" begin
