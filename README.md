@@ -142,5 +142,5 @@ iterations = Iterators.take(optimizer(m, objective), 100)
 The `iterations` object is an iterator that can be looped over, and its elements be inspected (for example to decide when to stop training). For the sake of compactness, here we will just take the output of the last iteration as solution: 
 
 ```julia
-m_fit = ProtoGrad.last(iterations).model
+m_fit = ProtoGrad.last(iterations).solution
 ```

@@ -21,6 +21,11 @@ _push_allparams!(c, m::Model) = begin
 end
 allparams(m::Model) = _push_allparams!([], m)
 
+overlap(m1::Model, m2::Model) = [
+    p1 for (p1, p2) in zip(ProtoGrad.allparams(m1), ProtoGrad.allparams(m2))
+    if objectid(p1) == objectid(p2)
+]
+
 Base.:(==)(m1::T, m2::T) where T <: Model = all(p1 == p2 for (p1, p2) in zip(allfields(m1), allfields(m2)))
 Base.:(==)(m1::T1, m2::T2) where {T1 <: Model, T2 <: Model} = false
 

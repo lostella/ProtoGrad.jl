@@ -36,9 +36,12 @@ using Test
         m2_final = nothing
 
         for output in Iterators.take(optimizer(m2, f), 10)
-            m2_final = output.model
+            @test length(ProtoGrad.overlap(output.solution, m2)) == 0
+            @test length(ProtoGrad.overlap(output.solution, m2_orig)) == 0
+            m2_final = output.solution
         end
 
+        @test length(ProtoGrad.overlap(m2_final, m2_orig)) == 0
         @test m2_final.W != m2_orig.W
         @test m2_final.b != m2_orig.b
     end

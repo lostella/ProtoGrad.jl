@@ -14,6 +14,8 @@ using Test
 
             @test eltype(vec_m) == T
 
+            @test length(ProtoGrad.overlap(m, m)) == length(ProtoGrad.allparams(m))
+
             res = m + m
             @test typeof(res) == typeof(m)
             vec_res = vec(res)
@@ -72,6 +74,7 @@ using Test
             vec_mcopy = vec(mcopy)
             @test eltype(vec_mcopy) == T
             @test vec_mcopy == vec_m
+            @test length(ProtoGrad.overlap(m, mcopy)) == 0
 
             msimilar = similar(m)
             @test typeof(msimilar) == typeof(m)

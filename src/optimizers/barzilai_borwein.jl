@@ -20,9 +20,7 @@ end
 function Base.iterate(iter::BarzilaiBorweinIterable)
     w = copy(iter.w0)
     grad_f_w, f_w = gradient(iter.f, w)
-    state = BarzilaiBorweinState(
-        w, f_w, grad_f_w, iter.alpha
-    )
+    state = BarzilaiBorweinState(w, f_w, grad_f_w, iter.alpha)
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 

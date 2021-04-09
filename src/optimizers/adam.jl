@@ -7,12 +7,7 @@ struct AdamIterable{T, F, S, R}
     epsilon::R
 end
 
-function AdamIterable(w0, f; stepsize=1e-3, beta1=0.9, beta2=0.999, epsilon=1e-8)
-    if typeof(stepsize) <: Number
-        stepsize = Iterators.repeated(stepsize)
-    end
-    return AdamIterable(w0, f, stepsize, beta1, beta2, epsilon)
-end
+AdamIterable(w0, f; stepsize=1e-3, beta1=0.9, beta2=0.999, epsilon=1e-8) = AdamIterable(w0, f, to_iterator(stepsize), beta1, beta2, epsilon)
 
 Base.IteratorSize(::Type{<:AdamIterable}) = Base.IsInfinite()
 

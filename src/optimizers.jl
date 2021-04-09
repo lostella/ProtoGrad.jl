@@ -1,8 +1,11 @@
 struct IterationOutput{M, R}
-    model::M
+    solution::M
     value::R
     gradient::M
 end
+
+to_iterator(x::Any) = x
+to_iterator(n::T) where T <: Number = Iterators.repeated(n)
 
 include("optimizers/gradient_descent.jl")
 include("optimizers/nesterov.jl")

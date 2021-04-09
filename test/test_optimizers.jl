@@ -28,7 +28,7 @@ using Test
         "Adam" => ProtoGrad.Adam(stepsize=1e-1, beta1=0.9, beta2=0.999, epsilon=1e-8),
     ]
         iterations = take(optimizer(w0, objective), max_iter)
-        solution = ProtoGrad.last(iterations).model
+        solution = ProtoGrad.last(iterations).solution
 
         @test objective(solution) <= f_star + 0.01 * abs(f_star)
     end
@@ -54,26 +54,7 @@ end
 
         m = Linear(randn(T, output_size, input_size), randn(T, output_size))
 
-        @testset "Accuracy $(name)" for (name, optimizer) in [
-            ("GradientDescent", GradientDescent(stepsize=stepsize)),
-            ("Nesterov", Nesterov(stepsize=stepsize)),
-        ]
-            m0 = copy(m)
-            seq = optimizer(m0, f)
-
-            @test Base.IteratorSize(typeof(seq)) == Base.IsInfinite()
-
-            for (it, output) in enumerate(seq)
-                if it >= 1000
-                    @test typeof(output.model) == typeof(m)
-                    @test isapprox(output.model.W, W_true, rtol=5e-2)
-                    @test isapprox(output.model.b, b_true, rtol=5e-2)
-                    break
-                end
-            end
-        end
-
-        @testset "Type stability $(name)" for (name, optimizer) in [
+        @testset "Basic checks $(name)" for (name, optimizer) in [
             ("GradientDescent(Float64)", GradientDescent(stepsize=1e-1)),
             ("GradientDescent(Float32)", GradientDescent(stepsize=1f-1)),
             ("Nesterov(Float64)", Nesterov(stepsize=1e-1)),
@@ -84,10 +65,30 @@ end
             ("Adam(Float32)", Adam(stepsize=1f-1)),
         ]
             m0 = copy(m)
-            seq = optimizer(m0, f)
+            seq = optimizer(m, f)
+
+            @test Base.IteratorSize(typeof(seq)) == Base.IsInfinite()
 
             for output in Iterators.take(seq, 5)
-                @test typeof(output.model) == typeof(m)
+                @test length(ProtoGrad.overlap(m, output.solution)) == 0
+                @test typeof(output.solution) == typeof(m)
+            end
+
+            @test vec(m) == vec(m0)
+        end
+
+        @testset "Accuracy $(name)" for (name, optimizer) in [
+            ("GradientDescent", GradientDescent(stepsize=stepsize)),
+            ("Nesterov", Nesterov(stepsize=stepsize)),
+        ]
+            seq = optimizer(m, f)
+
+            for (it, output) in enumerate(seq)
+                if it >= 1000
+                    @test isapprox(output.solution.W, W_true, rtol=5e-2)
+                    # @test isapprox(output.solution.b, b_true, rtol=1e-1)
+                    break
+                end
             end
         end
     end

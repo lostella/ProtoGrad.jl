@@ -4,12 +4,7 @@ struct NesterovIterable{T, F, S}
     stepsize::S
 end
 
-function NesterovIterable(w0, f; stepsize)
-    if typeof(stepsize) <: Number
-        stepsize = Iterators.repeated(stepsize)
-    end
-    return NesterovIterable(w0, f, stepsize)
-end
+NesterovIterable(w0, f; stepsize) = NesterovIterable(w0, f, to_iterator(stepsize))
 
 Base.IteratorSize(::Type{<:NesterovIterable}) = Base.IsInfinite()
 

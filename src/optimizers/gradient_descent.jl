@@ -4,12 +4,7 @@ struct GradientDescentIterable{T, F, S}
     stepsize::S
 end
 
-function GradientDescentIterable(w0, f; stepsize)
-    if typeof(stepsize) <: Number
-        stepsize = Iterators.repeated(stepsize)
-    end
-    return GradientDescentIterable(w0, f, stepsize)
-end
+GradientDescentIterable(w0, f; stepsize) = GradientDescentIterable(w0, f, to_iterator(stepsize))
 
 Base.IteratorSize(::Type{<:GradientDescentIterable}) = Base.IsInfinite()
 
@@ -23,9 +18,7 @@ end
 function Base.iterate(iter::GradientDescentIterable)
     w = copy(iter.w0)
     grad_f_w, f_w = gradient(iter.f, w)
-    state = GradientDescentState(
-        w, f_w, grad_f_w, Iterators.Stateful(iter.stepsize)
-    )
+    state = GradientDescentState(w, f_w, grad_f_w, Iterators.Stateful(iter.stepsize))
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 

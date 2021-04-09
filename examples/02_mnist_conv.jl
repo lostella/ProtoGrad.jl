@@ -58,7 +58,7 @@ num_batches_per_epoch = 500
 within_training_mode() do
     @showprogress for epoch in 1:num_epochs
         for output in Iterators.take(iterations, num_batches_per_epoch)
-            global m = output.model
+            global m = output.solution
         end
     end
 end
