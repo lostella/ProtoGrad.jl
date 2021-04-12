@@ -2,6 +2,7 @@ using ProtoGrad
 using ProtoGrad: Model, Linear, Conv, ReLU, relu, softmax, Dropout, Compose, SupervisedObjective, mse
 using LinearAlgebra
 using Serialization
+using Statistics
 using Test
 
 @testset "Basic operations" begin
@@ -86,6 +87,18 @@ using Test
             vec_mzero = vec(mzero)
             @test eltype(vec_mzero) == T
             @test all(vec_mzero .== T(0))
+
+            msum = sum((k * m for k in 1:3))
+            @test typeof(msum) == typeof(m)
+            vec_msum = vec(msum)
+            @test eltype(vec_msum) == T
+            @test vec_msum == 6 * vec_m
+
+            mmean = mean((k * m for k in [1, 2, 4]))
+            @test typeof(mmean) == typeof(m)
+            vec_mmean = vec(mmean)
+            @test eltype(vec_mmean) == T
+            @test vec_mmean ≈ (vec_m * 7) / 3
         end
     end
 end
