@@ -99,6 +99,10 @@ using Test
             vec_mmean = vec(mmean)
             @test eltype(vec_mmean) == T
             @test vec_mmean ≈ (vec_m * 7) / 3
+
+            coll_m = collect(m)
+            @test_skip eltype(coll_m) == T
+            @test coll_m == vec_m
         end
     end
 end

@@ -3,12 +3,10 @@ using Zygote: pullback
 
 abstract type Model end
 
-allfields(m::Model) = [getfield(m, k) for k in fieldnames(typeof(m))]
-
 map_recursively(fun, f::Function) = f
 map_recursively(fun, a::AbstractArray) = fun(a)
 map_recursively(fun, t::Tuple) = fun.(t)
-map_recursively(fun, m::T) where T <: Model = T((map_recursively(fun, f) for f in allfields(m))...)
+map_recursively(fun, m::T) where T <: Model = T((map_recursively(fun, getfield(m, k)) for k in fieldnames(T))...)
 
 for fun in (:similar, :copy, :zero)
     _fun = Symbol("_", fun)
@@ -19,7 +17,14 @@ for fun in (:similar, :copy, :zero)
     end
 end
 
-_push_allparams!(c::Nothing, a::AbstractArray{T}) where T <: Number = AbstractArray{T}[a]
+# NOTE: looks like this is slower than growing an array with push!
+# _yield_allparams(::Function) = ()
+# _yield_allparams(t::Tuple) = Iterators.flatten((_yield_allparams(el) for el in t))
+# _yield_allparams(a::AbstractArray{T}) where T <: Number = (a,)
+# _yield_allparams(m::T) where T <: Model = Iterators.flatten((_yield_allparams(getfield(m, k)) for k in fieldnames(T)))
+# allparams(m::Model) = _yield_allparams(m)
+
+_push_allparams!(::Nothing, a::AbstractArray{T}) where T <: Number = AbstractArray{T}[a]
 _push_allparams!(c::Vector, a::AbstractArray{T}) where T <: Number = push!(c, a)
 _push_allparams!(c, ::Function) = c
 _push_allparams!(c, t::Tuple) = begin
@@ -28,9 +33,9 @@ _push_allparams!(c, t::Tuple) = begin
     end
     return c
 end
-_push_allparams!(c, m::Model) = begin
-    for f in allfields(m)
-        c = _push_allparams!(c, f)
+_push_allparams!(c, m::T) where T <: Model = begin
+    for k in fieldnames(T)
+        c = _push_allparams!(c, getfield(m, k))
     end
     return c
 end
@@ -43,6 +48,7 @@ overlap(m1::Model, m2::Model) = [
 
 Base.vec(m::Model) = vcat((vec(p) for p in allparams(m))...)
 
+Base.IteratorSize(::Type{<:Model}) = Base.HasLength()
 Base.length(m::Model) = sum(length(p) for p in allparams(m))
 
 function Base.iterate(m::Model, itr=Iterators.flatten(allparams(m)))
