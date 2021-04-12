@@ -5,6 +5,20 @@ abstract type Model end
 
 allfields(m::Model) = [getfield(m, k) for k in fieldnames(typeof(m))]
 
+map_recursively(fun, f::Function) = f
+map_recursively(fun, a::AbstractArray) = fun(a)
+map_recursively(fun, t::Tuple) = fun.(t)
+map_recursively(fun, m::T) where T <: Model = T((map_recursively(fun, f) for f in allfields(m))...)
+
+for fun in (:similar, :copy, :zero)
+    _fun = Symbol("_", fun)
+    @eval begin
+        $_fun(x) = $fun(x)
+        $_fun(f::Function) = f
+        Base.$fun(m::Model) = map_recursively($_fun, m)
+    end
+end
+
 _push_allparams!(c::Nothing, a::AbstractArray{T}) where T <: Number = AbstractArray{T}[a]
 _push_allparams!(c::Vector, a::AbstractArray{T}) where T <: Number = push!(c, a)
 _push_allparams!(c, ::Function) = c
@@ -27,28 +41,7 @@ overlap(m1::Model, m2::Model) = [
     if objectid(p1) == objectid(p2)
 ]
 
-Base.:(==)(m1::T, m2::T) where T <: Model = all(p1 == p2 for (p1, p2) in zip(allfields(m1), allfields(m2)))
-Base.:(==)(m1::T1, m2::T2) where {T1 <: Model, T2 <: Model} = false
-
-_copy(f::Function) = f
-_copy(a::AbstractArray) = copy(a)
-_copy(t::Tuple) = _copy.(t)
-_copy(m::T) where T <: Model = T((_copy(f) for f in allfields(m))...)
-Base.copy(m::Model) = _copy(m)
-
-_similar(f::Function) = f
-_similar(a::AbstractArray) = similar(a)
-_similar(t::Tuple) = _similar.(t)
-_similar(m::T) where T <: Model = T((_similar(f) for f in allfields(m))...)
-Base.similar(m::Model) = _similar(m)
-
 Base.vec(m::Model) = vcat((vec(p) for p in allparams(m))...)
-
-_zero(f::Function) = f
-_zero(a::AbstractArray) = zero(a)
-_zero(t::Tuple) = _zero.(t)
-_zero(m::T) where T <: Model = T((_zero(f) for f in allfields(m))...)
-Base.zero(m::Model) = _zero(m)
 
 Base.length(m::Model) = sum(length(p) for p in allparams(m))
 
