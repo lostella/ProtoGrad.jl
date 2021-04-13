@@ -103,6 +103,14 @@ using Test
             coll_m = collect(m)
             @test_skip eltype(coll_m) == T
             @test coll_m == vec_m
+
+            length_m = length(m)
+            @test length_m == length(vec_m)
+
+            v = m[end-1]
+            @test vec_m[end-1] == v
+            m[end-1] = T(42)
+            @test vec(m)[end-1] == T(42)
         end
     end
 end

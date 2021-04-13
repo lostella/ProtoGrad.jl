@@ -18,7 +18,6 @@ include("model.jl")
 include("layers.jl")
 include("objectives.jl")
 include("gradient.jl")
-include("broadcast.jl")
 include("optimizers.jl")
 
 end # module
