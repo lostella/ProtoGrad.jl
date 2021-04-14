@@ -1,6 +1,5 @@
 using Base.Iterators: repeated
 using ProtoGrad: Linear, Compose, ReLU, SupervisedObjective, mse
-using ProtoGrad: GradientDescent, Nesterov, BarzilaiBorwein, Adam
 using LinearAlgebra
 using Test
 
@@ -25,7 +24,8 @@ using Test
     @testset "$(name)" for (name, optimizer) in [
         "GradientDescent" => ProtoGrad.GradientDescent(stepsize=1/opnorm(Q)),
         "Nesterov" => ProtoGrad.Nesterov(stepsize=1/opnorm(Q)),
-        "Adam" => ProtoGrad.Adam(stepsize=1e-1, beta1=0.9, beta2=0.999, epsilon=1e-8),
+        "RMSProp" => ProtoGrad.RMSProp(stepsize=1/opnorm(Q), alpha=0.99, epsilon=1e-8),
+        "Adam" => ProtoGrad.Adam(stepsize=1/opnorm(Q), beta1=0.9, beta2=0.999, epsilon=1e-8),
     ]
         iterations = take(optimizer(w0, objective), max_iter)
         solution = ProtoGrad.last(iterations).solution
@@ -36,7 +36,7 @@ end
 
 @testset "Supervised objective" begin
 
-    @testset "Linear ($(T))" for T in [Float32, Float64]
+    @testset "Linear model ($(T))" for T in [Float32, Float64]
 
         input_size, output_size = 10, 1
         batch_size = 5000
@@ -55,14 +55,13 @@ end
         m = Linear(randn(T, output_size, input_size), randn(T, output_size))
 
         @testset "Basic checks $(name)" for (name, optimizer) in [
-            ("GradientDescent(Float64)", GradientDescent(stepsize=1e-1)),
-            ("GradientDescent(Float32)", GradientDescent(stepsize=1f-1)),
-            ("Nesterov(Float64)", Nesterov(stepsize=1e-1)),
-            ("Nesterov(Float32)", Nesterov(stepsize=1f-1)),
-            ("BarzilaiBorwein(Float64)", BarzilaiBorwein(alpha=1e-1)),
-            ("BarzilaiBorwein(Float32)", BarzilaiBorwein(alpha=1f-1)),
-            ("Adam(Float64)", Adam(stepsize=1e-1)),
-            ("Adam(Float32)", Adam(stepsize=1f-1)),
+            "GradientDescent" => ProtoGrad.GradientDescent(stepsize=stepsize),
+            "Nesterov" => ProtoGrad.Nesterov(stepsize=stepsize),
+            "BarzilaiBorwein" => ProtoGrad.BarzilaiBorwein(alpha=stepsize),
+            "AdaGrad" => ProtoGrad.AdaGrad(stepsize=stepsize),
+            "RMSProp" => ProtoGrad.RMSProp(stepsize=stepsize),
+            "AdaDelta" => ProtoGrad.AdaDelta(),
+            "Adam" => ProtoGrad.Adam(stepsize=stepsize),
         ]
             m0 = copy(m)
             seq = optimizer(m, f)
@@ -78,8 +77,8 @@ end
         end
 
         @testset "Accuracy $(name)" for (name, optimizer) in [
-            ("GradientDescent", GradientDescent(stepsize=stepsize)),
-            ("Nesterov", Nesterov(stepsize=stepsize)),
+            "GradientDescent" => ProtoGrad.GradientDescent(stepsize=stepsize),
+            "Nesterov" => ProtoGrad.Nesterov(stepsize=stepsize),
         ]
             seq = optimizer(m, f)
 
