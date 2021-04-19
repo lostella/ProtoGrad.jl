@@ -1,10 +1,6 @@
-using Base.Iterators: repeated
-using ProtoGrad: Linear, Compose, ReLU, SupervisedObjective, mse
-using LinearAlgebra
-using Test
-
-using Base.Iterators: take
+using Base.Iterators: repeated, take, enumerate
 using ProtoGrad
+using ProtoGrad: Linear, Compose, ReLU, SupervisedObjective, mse
 using LinearAlgebra
 using Test
 
@@ -16,17 +12,32 @@ using Test
 
     x_star = -Q\q
     f_star = objective(x_star)
+    L = opnorm(Q)
 
     w0 = zeros(10)
 
-    max_iter = 1000
+    @testset "$(name)" for (name, optimizer) in [
+        "GradientDescent" => ProtoGrad.GradientDescent(stepsize=1/L),
+    ]
+        for (k, output) in enumerate(take(optimizer(w0, objective), 200))
+            @test objective(output.solution) - f_star <= 2 * L * norm(x_star)^2 / (2 * (k - 1))
+        end
+    end
 
     @testset "$(name)" for (name, optimizer) in [
-        "GradientDescent" => ProtoGrad.GradientDescent(stepsize=1/opnorm(Q)),
-        "Nesterov" => ProtoGrad.Nesterov(stepsize=1/opnorm(Q)),
-        "RMSProp" => ProtoGrad.RMSProp(stepsize=1/opnorm(Q), alpha=0.99, epsilon=1e-8),
-        "Adam" => ProtoGrad.Adam(stepsize=1/opnorm(Q), beta1=0.9, beta2=0.999, epsilon=1e-8),
+        "Nesterov" => ProtoGrad.Nesterov(stepsize=1/L),
     ]
+        for (k, output) in enumerate(take(optimizer(w0, objective), 200))
+            @test objective(output.solution) - f_star <= 2 * L * norm(x_star)^2 / k^2
+        end
+    end
+
+    @testset "$(name)" for (name, optimizer) in [
+        "RMSProp" => ProtoGrad.RMSProp(stepsize=1/L, alpha=0.99, epsilon=1e-8),
+        "Adam" => ProtoGrad.Adam(stepsize=1/L, beta1=0.9, beta2=0.999, epsilon=1e-8),
+    ]
+        max_iter = 1000
+
         iterations = take(optimizer(w0, objective), max_iter)
         solution = ProtoGrad.last(iterations).solution
 
