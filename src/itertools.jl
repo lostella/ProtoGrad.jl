@@ -17,7 +17,7 @@ mutable struct Settable{T}
     v::T
 end
 
-set!(b::Settable{T}, v) where T = (b.v = v)
+set!(b::Settable{T}, v::T) where T = (b.v = v)
 
 Base.IteratorSize(::Type{<:Settable}) = Base.IsInfinite()
 
