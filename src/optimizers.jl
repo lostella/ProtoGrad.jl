@@ -8,6 +8,7 @@ to_iterator(x::Any) = x
 to_iterator(n::T) where T <: Number = Iterators.repeated(n)
 
 include("optimizers/gradient_descent.jl")
+include("optimizers/polyak.jl")
 include("optimizers/nesterov.jl")
 include("optimizers/barzilai_borwein.jl")
 include("optimizers/adagrad.jl")

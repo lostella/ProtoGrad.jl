@@ -33,6 +33,7 @@ using Test
     end
 
     @testset "$(name)" for (name, optimizer) in [
+        "Polyak" => ProtoGrad.Polyak(stepsize=1/L, momentum=0.5),
         "RMSProp" => ProtoGrad.RMSProp(stepsize=1/L, alpha=0.99, epsilon=1e-8),
         "Adam" => ProtoGrad.Adam(stepsize=1/L, beta1=0.9, beta2=0.999, epsilon=1e-8),
     ]
@@ -67,6 +68,7 @@ end
 
         @testset "Basic checks $(name)" for (name, optimizer) in [
             "GradientDescent" => ProtoGrad.GradientDescent(stepsize=stepsize),
+            "Polyak" => ProtoGrad.Polyak(stepsize=stepsize, momentum=0.5),
             "Nesterov" => ProtoGrad.Nesterov(stepsize=stepsize),
             "BarzilaiBorwein" => ProtoGrad.BarzilaiBorwein(alpha=stepsize),
             "AdaGrad" => ProtoGrad.AdaGrad(stepsize=stepsize),
@@ -89,6 +91,7 @@ end
 
         @testset "Accuracy $(name)" for (name, optimizer) in [
             "GradientDescent" => ProtoGrad.GradientDescent(stepsize=stepsize),
+            "Polyak" => ProtoGrad.Polyak(stepsize=stepsize, momentum=0.5),
             "Nesterov" => ProtoGrad.Nesterov(stepsize=stepsize),
         ]
             seq = optimizer(m, f)
