@@ -37,4 +37,4 @@ struct AdaGrad
     AdaGrad(; kwargs...) = new(kwargs)
 end
 
-(a::AdaGrad)(args...) = AdaGradIterable(args...; a.kwargs...)
+(alg::AdaGrad)(args...) = AdaGradIterable(args...; alg.kwargs...)

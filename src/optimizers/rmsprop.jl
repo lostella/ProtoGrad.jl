@@ -38,4 +38,4 @@ struct RMSProp
     RMSProp(; kwargs...) = new(kwargs)
 end
 
-(a::RMSProp)(args...) = RMSPropIterable(args...; a.kwargs...)
+(alg::RMSProp)(args...) = RMSPropIterable(args...; alg.kwargs...)

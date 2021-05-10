@@ -52,4 +52,4 @@ struct Nesterov
     Nesterov(; kwargs...) = new(kwargs)
 end
 
-(n::Nesterov)(args...) = NesterovIterable(args...; n.kwargs...)
+(alg::Nesterov)(args...) = NesterovIterable(args...; alg.kwargs...)

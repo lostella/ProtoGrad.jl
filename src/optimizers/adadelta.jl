@@ -39,4 +39,4 @@ struct AdaDelta
     AdaDelta(; kwargs...) = new(kwargs)
 end
 
-(a::AdaDelta)(args...) = AdaDeltaIterable(args...; a.kwargs...)
+(alg::AdaDelta)(args...) = AdaDeltaIterable(args...; alg.kwargs...)
