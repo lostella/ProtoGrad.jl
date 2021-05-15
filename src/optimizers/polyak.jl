@@ -15,21 +15,21 @@ mutable struct PolyakState{T, R, G, S, M}
     grad_f_w::G
     stepsize_iterator::S
     momentum_iterator::M
-    w_prev::T
+    step::T
 end
 
 function Base.iterate(iter::PolyakIterable)
     w = copy(iter.w0)
     grad_f_w, f_w = gradient(iter.f, w)
-    state = PolyakState(w, f_w, grad_f_w, Iterators.Stateful(iter.stepsize), Iterators.Stateful(iter.momentum), copy(w))
+    state = PolyakState(w, f_w, grad_f_w, Iterators.Stateful(iter.stepsize), Iterators.Stateful(iter.momentum), zero(w))
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
 function Base.iterate(iter::PolyakIterable, state::PolyakState)
     stepsize = popfirst!(state.stepsize_iterator)
     momentum = popfirst!(state.momentum_iterator)
-    state.w_prev .= state.w .- stepsize .* state.grad_f_w .+ momentum .* (state.w - state.w_prev)
-    state.w, state.w_prev = state.w_prev, state.w
+    state.step .= momentum .* state.step .- stepsize .* state.grad_f_w
+    state.w .+= state.step
     state.grad_f_w, state.f_w = gradient(iter.f, state.w)
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
