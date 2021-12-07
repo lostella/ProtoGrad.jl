@@ -33,5 +33,5 @@ end
 function ChainRulesCore.rrule(f::SupervisedObjective, m)
     x, y = get_instance_and_update!(f)
     out, pb = pullback(m -> f.loss(m(x), y), m)
-    return out, c -> (ChainRulesCore.NO_FIELDS, pb(c)[1])
+    return out, c -> (ChainRulesCore.NoTangent(), pb(c)[1])
 end

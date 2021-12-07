@@ -115,10 +115,10 @@ end
 
 function ChainRulesCore.rrule(::typeof(dropout), x, p; dims=:)
     if !is_training_mode()
-        return x, c -> (ChainRulesCore.NO_FIELDS, c, ChainRulesCore.Zero())
+        return x, c -> (ChainRulesCore.NoTangent(), c, ChainRulesCore.ZeroTangent())
     end
     y = _dropout_mask(x, p, dims=dims)
-    return x .* y, c -> (ChainRulesCore.NO_FIELDS, c .* y, ChainRulesCore.Zero())
+    return x .* y, c -> (ChainRulesCore.NoTangent(), c .* y, ChainRulesCore.ZeroTangent())
 end
 
 struct Dropout{P, D} <: Model end
