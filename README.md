@@ -1,7 +1,3 @@
-```@meta
-EditURL = "<unknown>/docs/src/README.jl"
-```
-
 # ProtoGrad.jl
 
 [![Build status](https://github.com/JuliaFirstOrder/ProximalAlgorithms.jl/workflows/Test/badge.svg)](https://github.com/JuliaFirstOrder/ProximalAlgorithms.jl/actions?query=workflow%3ATest)
