@@ -34,9 +34,4 @@ function Base.iterate(iter::AdaDeltaIterable, state::AdaDeltaState)
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
-struct AdaDelta
-    kwargs
-    AdaDelta(; kwargs...) = new(kwargs)
-end
-
-(alg::AdaDelta)(args...) = AdaDeltaIterable(args...; alg.kwargs...)
+AdaDelta(; kwargs...) = IterativeAlgorithm(AdaDeltaIterable; kwargs...)

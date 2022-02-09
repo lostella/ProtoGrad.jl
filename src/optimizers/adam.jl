@@ -7,7 +7,7 @@ struct AdamIterable{T, F, S, R}
     epsilon::R
 end
 
-AdamIterable(w0, f; stepsize=1e-3, beta1=0.9, beta2=0.999, epsilon=1e-8) = AdamIterable(w0, f, to_iterator(stepsize), beta1, beta2, epsilon)
+AdamIterable(w0, f; stepsize=1e-3, beta1=0.9, beta2=0.999, epsilon=1e-8) = AdamIterable(w0, f, stepsize, beta1, beta2, epsilon)
 
 Base.IteratorSize(::Type{<:AdamIterable}) = Base.IsInfinite()
 
@@ -26,7 +26,7 @@ function Base.iterate(iter::AdamIterable)
     w = copy(iter.w0)
     grad_f_w, f_w = gradient(iter.f, w)
     state = AdamState(
-        w, f_w, grad_f_w, Iterators.Stateful(iter.stepsize),
+        w, f_w, grad_f_w, iter.stepsize |> to_iterator |> Iterators.Stateful,
         zero(w), zero(w), iter.beta1, iter.beta2
     )
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
@@ -44,9 +44,4 @@ function Base.iterate(iter::AdamIterable, state::AdamState)
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
-struct Adam
-    kwargs
-    Adam(; kwargs...) = new(kwargs)
-end
-
-(alg::Adam)(args...) = AdamIterable(args...; alg.kwargs...)
+Adam(; kwargs...) = IterativeAlgorithm(AdamIterable; kwargs...)

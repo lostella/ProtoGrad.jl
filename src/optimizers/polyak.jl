@@ -5,7 +5,7 @@ struct PolyakIterable{T, F, S, M}
     momentum::M
 end
 
-PolyakIterable(w0, f; stepsize, momentum) = PolyakIterable(w0, f, to_iterator(stepsize), to_iterator(momentum))
+PolyakIterable(w0, f; stepsize, momentum) = PolyakIterable(w0, f, stepsize, momentum)
 
 Base.IteratorSize(::Type{<:PolyakIterable}) = Base.IsInfinite()
 
@@ -21,7 +21,7 @@ end
 function Base.iterate(iter::PolyakIterable)
     w = copy(iter.w0)
     grad_f_w, f_w = gradient(iter.f, w)
-    state = PolyakState(w, f_w, grad_f_w, Iterators.Stateful(iter.stepsize), Iterators.Stateful(iter.momentum), zero(w))
+    state = PolyakState(w, f_w, grad_f_w, iter.stepsize |> to_iterator |> Iterators.Stateful, iter.momentum |> to_iterator |> Iterators.Stateful, zero(w))
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
@@ -34,9 +34,4 @@ function Base.iterate(iter::PolyakIterable, state::PolyakState)
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
-struct Polyak
-    kwargs
-    Polyak(; kwargs...) = new(kwargs)
-end
-
-(alg::Polyak)(args...) = PolyakIterable(args...; alg.kwargs...)
+Polyak(; kwargs...) = IterativeAlgorithm(PolyakIterable; kwargs...)

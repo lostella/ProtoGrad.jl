@@ -5,7 +5,7 @@ struct AdaGradIterable{T, F, S, R}
     epsilon::R
 end
 
-AdaGradIterable(w0, f; stepsize=1e-3, epsilon=1e-8) = AdaGradIterable(w0, f, to_iterator(stepsize), epsilon)
+AdaGradIterable(w0, f; stepsize=1e-3, epsilon=1e-8) = AdaGradIterable(w0, f, stepsize, epsilon)
 
 Base.IteratorSize(::Type{<:AdaGradIterable}) = Base.IsInfinite()
 
@@ -20,7 +20,7 @@ end
 function Base.iterate(iter::AdaGradIterable)
     w = copy(iter.w0)
     grad_f_w, f_w = gradient(iter.f, w)
-    state = AdaGradState(w, f_w, grad_f_w, Iterators.Stateful(iter.stepsize), zero(w))
+    state = AdaGradState(w, f_w, grad_f_w, iter.stepsize |> to_iterator |> Iterators.Stateful, zero(w))
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
@@ -32,9 +32,4 @@ function Base.iterate(iter::AdaGradIterable, state::AdaGradState)
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
-struct AdaGrad
-    kwargs
-    AdaGrad(; kwargs...) = new(kwargs)
-end
-
-(alg::AdaGrad)(args...) = AdaGradIterable(args...; alg.kwargs...)
+AdaGrad(; kwargs...) = IterativeAlgorithm(AdaGradIterable; kwargs...)

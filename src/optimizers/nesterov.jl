@@ -12,7 +12,7 @@ struct NesterovIterable{T, F, S, M}
     momentum::M
 end
 
-NesterovIterable(w0, f; stepsize, momentum=NesterovMomentum()) = NesterovIterable(w0, f, to_iterator(stepsize), to_iterator(momentum))
+NesterovIterable(w0, f; stepsize, momentum=NesterovMomentum()) = NesterovIterable(w0, f, stepsize, momentum)
 
 Base.IteratorSize(::Type{<:NesterovIterable}) = Base.IsInfinite()
 
@@ -31,7 +31,8 @@ function Base.iterate(iter::NesterovIterable)
     grad_f_w, f_w = gradient(iter.f, w)
     state = NesterovState(
         w, f_w, grad_f_w,
-        Iterators.Stateful(iter.stepsize), Iterators.Stateful(iter.momentum),
+        iter.stepsize |> to_iterator |> Iterators.Stateful,
+        iter.momentum |> to_iterator |> Iterators.Stateful,
         copy(w), zero(w)
     )
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
@@ -47,9 +48,4 @@ function Base.iterate(iter::NesterovIterable, state::NesterovState)
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
-struct Nesterov
-    kwargs
-    Nesterov(; kwargs...) = new(kwargs)
-end
-
-(alg::Nesterov)(args...) = NesterovIterable(args...; alg.kwargs...)
+Nesterov(; kwargs...) = IterativeAlgorithm(NesterovIterable; kwargs...)

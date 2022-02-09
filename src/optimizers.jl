@@ -1,3 +1,11 @@
+struct IterativeAlgorithm{IteratorType, K}
+    kwargs::K
+end
+
+IterativeAlgorithm(T; kwargs...) = IterativeAlgorithm{T, typeof(kwargs)}(kwargs)
+
+(alg::IterativeAlgorithm{IteratorType})(args...; kwargs...) where IteratorType = IteratorType(args...; alg.kwargs..., kwargs...)
+
 struct IterationOutput{M, R}
     solution::M
     value::R

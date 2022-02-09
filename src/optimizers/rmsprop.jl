@@ -6,7 +6,7 @@ struct RMSPropIterable{T, F, S, R}
     epsilon::R
 end
 
-RMSPropIterable(w0, f; stepsize=1e-3, alpha=0.99, epsilon=1e-8) = RMSPropIterable(w0, f, to_iterator(stepsize), alpha, epsilon)
+RMSPropIterable(w0, f; stepsize=1e-3, alpha=0.99, epsilon=1e-8) = RMSPropIterable(w0, f, stepsize, alpha, epsilon)
 
 Base.IteratorSize(::Type{<:RMSPropIterable}) = Base.IsInfinite()
 
@@ -21,7 +21,7 @@ end
 function Base.iterate(iter::RMSPropIterable)
     w = copy(iter.w0)
     grad_f_w, f_w = gradient(iter.f, w)
-    state = RMSPropState(w, f_w, grad_f_w, Iterators.Stateful(iter.stepsize), zero(w))
+    state = RMSPropState(w, f_w, grad_f_w, iter.stepsize |> to_iterator |> Iterators.Stateful, zero(w))
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
@@ -33,9 +33,4 @@ function Base.iterate(iter::RMSPropIterable, state::RMSPropState)
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
-struct RMSProp
-    kwargs
-    RMSProp(; kwargs...) = new(kwargs)
-end
-
-(alg::RMSProp)(args...) = RMSPropIterable(args...; alg.kwargs...)
+RMSProp(; kwargs...) = IterativeAlgorithm(RMSPropIterable; kwargs...)

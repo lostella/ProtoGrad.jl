@@ -33,9 +33,4 @@ function Base.iterate(iter::BarzilaiBorweinIterable, state::BarzilaiBorweinState
     return IterationOutput(state.w, state.f_w, state.grad_f_w), state
 end
 
-struct BarzilaiBorwein
-    kwargs
-    BarzilaiBorwein(; kwargs...) = new(kwargs)
-end
-
-(alg::BarzilaiBorwein)(args...) = BarzilaiBorweinIterable(args...; alg.kwargs...)
+BarzilaiBorwein(; kwargs...) = IterativeAlgorithm(BarzilaiBorweinIterable; kwargs...)
