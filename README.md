@@ -71,7 +71,7 @@ dot(m, m_sum)
 ````
 
 ````
-60.53107551271435
+60.98490613000809
 ````
 
 ## Objective functions
@@ -94,8 +94,7 @@ together with some data (here artificially generated, according to a random, noi
 A_original = randn(3, 5)
 b_original = randn(3)
 x = randn(5, 300)
-y = A_original * x .+ b_original .+ randn(3, 300);
-nothing #hide
+y = A_original * x .+ b_original .+ randn(3, 300)
 ````
 
 to define the objective:
@@ -107,7 +106,7 @@ objective(m) # returns some "large" loss value
 ````
 
 ````
-34.61860328182097
+16.988103019562196
 ````
 
 Stochastic approximations to the full-data objective above can be implemented by iterating the data in batches, and coupling it with the loss, as follows:
@@ -138,10 +137,10 @@ stochastic_objective(m) |> println # time
 ````
 
 ````
-26.925675733560126
-36.23546902286696
-32.66543025935602
-35.24010526515539
+13.799104481641637
+16.473127356129876
+18.438358936788205
+16.652131475339687
 
 ````
 
@@ -154,7 +153,7 @@ grad, val = ProtoGrad.gradient(objective, m)
 ````
 
 ````
-(Main.##310.LinearModel, 34.61860328182097)
+(Main.##310.LinearModel, 16.988103019562196)
 ````
 
 Here `val` is the value of the objective evaluated at `m`, while `grad` contains its gradient with respect to **all** attributes of `m`. Most importantly **`grad` is itself a `LinearModel` object**. Therefore, `grad` can be added or subtracted from `m`, used in dot products and so on.
@@ -185,7 +184,7 @@ objective(m_fit) # returns a small loss value compared to `m`
 ````
 
 ````
-3.0598694439065213
+2.949699249534306
 ````
 
 ProtoGrad implements gradient descent and other optimization algorithms in the form of iterators. The following will yield the same iterations as we just did:
