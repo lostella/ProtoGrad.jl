@@ -5,6 +5,8 @@ function Base.iterate(::NesterovMomentum, t=1.0)
     return (t - 1) / t_next, t_next
 end
 
+Base.IteratorSize(::Type{<:NesterovMomentum}) = Base.IsInfinite()
+
 struct NesterovIterable{T, F, S, M}
     w0::T
     f::F
