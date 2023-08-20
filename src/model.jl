@@ -151,7 +151,6 @@ end
 find_model(bc::Base.Broadcast.Broadcasted) = find_model(bc.args)
 find_model(args::Tuple) = find_model(find_model(args[1]), Base.tail(args))
 find_model(x) = x
-find_model(::Tuple{}) = nothing
 find_model(m::Model, rest) = m
 find_model(::Any, rest) = find_model(rest)
 
