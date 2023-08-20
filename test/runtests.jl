@@ -3,12 +3,10 @@ using Test
 using Aqua
 using JET
 
-@testset "Aqua" begin
-    Aqua.test_all(ProtoGrad; ambiguities=false)
-end
+@testset "Aqua" Aqua.test_all(ProtoGrad; ambiguities=false)
 
-@testset "JET" begin
-    JET.test_package(ProtoGrad)
+if VERSION >= v"1.9.0"
+    @testset "JET" JET.test_package(ProtoGrad)
 end
 
 include("test_utils.jl")
