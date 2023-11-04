@@ -1,5 +1,5 @@
 using ProtoGrad
-using ProtoGrad: Model, Linear, Conv, ReLU, relu, softmax, Dropout, Compose, SupervisedObjective, mse
+using ProtoGrad: Model, Linear, Conv, ReLU, relu, softmax, Dropout, Compose, mse
 using LinearAlgebra
 using Serialization
 using Statistics
@@ -8,8 +8,11 @@ using Test
 @testset "Basic operations" begin
     @testset "$(T)" for T in [Float16, Float32, Float64]
         @testset "$(name)" for (name, m) in [
-            ("Linear", Linear(T, 3=>2)),
-            ("Compose", Compose(Linear(T, 4=>3), ReLU(), Linear(T, 3=>2), x -> relu.(x)))
+            ("Linear", Linear(T, 3 => 2)),
+            (
+                "Compose",
+                Compose(Linear(T, 4 => 3), ReLU(), Linear(T, 3 => 2), x -> relu.(x)),
+            ),
         ]
             vec_m = vec(m)
 
@@ -88,7 +91,7 @@ using Test
             @test eltype(vec_mzero) == T
             @test all(vec_mzero .== T(0))
 
-            msum = sum((k * m for k in 1:3))
+            msum = sum((k * m for k = 1:3))
             @test typeof(msum) == typeof(m)
             vec_msum = vec(msum)
             @test eltype(vec_msum) == T
@@ -127,15 +130,15 @@ end
         x = randn(T, input_size, batch_size)
         y = W * x .+ b + randn(T, output_size, batch_size)
 
-        data_iter = Iterators.repeated((x, y))
-        f = SupervisedObjective(mse, data_iter)
+        objective = m -> mse(m(x), y)
 
-        grad, out = ProtoGrad.gradient(f, m)
+        out, pb = ProtoGrad.eval_with_pullback(objective, m, :Zygote)
+        grad = pb()
 
         @test typeof(out) <: Number  # TODO improve this assertion
         @test typeof(grad) == typeof(m)
 
-        @test out ≈ (norm(m.W * x .+ m.b - y) ^ 2) / batch_size
+        @test out ≈ (norm(m.W * x .+ m.b - y)^2) / batch_size
         @test grad.W ≈ (2 / batch_size) * ((m.W * x .+ m.b - y) * x')
         @test grad.b ≈ (2 / batch_size) * (m.W * x .+ m.b - y) * ones(batch_size)
 
@@ -162,10 +165,10 @@ end
         x = randn(T, input_size, batch_size)
         y = W_true * x .+ b_true + randn(T, output_size, batch_size)
 
-        data_iter = Iterators.repeated((x, y))
-        f = SupervisedObjective(mse, data_iter)
+        objective = m -> mse(m(x), y)
 
-        grad, out = ProtoGrad.gradient(f, m)
+        out, pb = ProtoGrad.eval_with_pullback(objective, m, :Zygote)
+        grad = pb()
 
         @test typeof(out) <: Number  # TODO improve this assertion
         @test typeof(grad) == typeof(m)
@@ -175,10 +178,10 @@ end
 
     @testset "Custom ($(T))" for T in [Float32, Float64]
         struct CustomModel <: Model
-            m1
-            act1
-            m2
-            act2
+            m1::Any
+            act1::Any
+            m2::Any
+            act2::Any
         end
 
         (m::CustomModel)(x) = (m.act2 ∘ m.m2 ∘ m.act1 ∘ m.m1)(x)
@@ -202,17 +205,16 @@ end
         x = randn(T, input_size, batch_size)
         y = W_true * x .+ b_true + randn(T, output_size, batch_size)
 
-        data_iter = Iterators.repeated((x, y))
-        f = SupervisedObjective(mse, data_iter)
+        objective = m -> mse(m(x), y)
 
-        grad, out = ProtoGrad.gradient(f, m)
+        out, pb = ProtoGrad.eval_with_pullback(objective, m, :Zygote)
+        grad = pb()
 
         @test typeof(out) <: Number  # TODO improve this assertion
         @test typeof(grad) == typeof(m)
 
         m .= m .- 3.0 .* grad
     end
-
 end
 
 @testset "Dropout" begin
@@ -225,11 +227,11 @@ end
         x = randn(T, input_size, batch_size)
         y = randn(T, output_size, batch_size)
 
-        data_iter = Iterators.repeated((x, y))
-        f = model -> ProtoGrad.mse(model(x), y)
+        objective = m -> mse(m(x), y)
 
         grad, out = ProtoGrad.within_training_mode() do
-            ProtoGrad.gradient(f, m)
+            out, pb = ProtoGrad.eval_with_pullback(objective, m, :Zygote)
+            return pb(), out
         end
 
         @test typeof(out) <: Number  # TODO improve this assertion
@@ -241,20 +243,14 @@ end
 
 @testset "Serde" begin
     for (m, x) in [
-        (Linear(Float32, 20=>10), randn(Float32, 20, 4)),
-        (Linear(Float64, 20=>10), randn(Float64, 20, 4)),
-        (Conv(Float32, 3=>5, (3, 3)), randn(Float32, 10, 10, 3, 4)),
-        (Conv(Float64, 3=>5, (3, 3)), randn(Float64, 10, 10, 3, 4)),
+        (Linear(Float32, 20 => 10), randn(Float32, 20, 4)),
+        (Linear(Float64, 20 => 10), randn(Float64, 20, 4)),
+        (Conv(Float32, 3 => 5, (3, 3)), randn(Float32, 10, 10, 3, 4)),
+        (Conv(Float64, 3 => 5, (3, 3)), randn(Float64, 10, 10, 3, 4)),
         (
-            Compose(
-                Linear(20=>10),
-                ReLU(),
-                Linear(10=>5),
-                x -> relu.(x),
-                softmax
-            ),
-            randn(Float32, 20, 4)
-        )
+            Compose(Linear(20 => 10), ReLU(), Linear(10 => 5), x -> relu.(x), softmax),
+            randn(Float32, 20, 4),
+        ),
     ]
         out = m(x)
 

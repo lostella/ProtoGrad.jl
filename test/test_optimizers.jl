@@ -1,6 +1,7 @@
 using Base.Iterators: repeated, take, enumerate
-using ProtoGrad
-using ProtoGrad: Linear, Compose, ReLU, SupervisedObjective, mse
+using ProtoGrad: GradientDescent, NesterovMethod, HeavyBallMethod, Adam
+using ProtoGrad: init, eval_with_pullback, step!
+using ProtoGrad: Linear, Compose, ReLU, mse
 using LinearAlgebra
 using Test
 
@@ -8,101 +9,85 @@ using Test
     Q = Diagonal([1e1, 1e-1, 1e0, 1e0, 1e0, 1e0, 1e0, 1e0, 1e0, 1e0])
     q = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
 
-    objective = x -> 0.5*dot(x, Q*x) + dot(x, q)
+    objective = x -> 0.5 * dot(x, Q * x) + dot(x, q)
 
-    x_star = -Q\q
-    f_star = objective(x_star)
+    x_star = -Q \ q
+    f_star, pb = eval_with_pullback(objective, x_star, :Zygote)
+    grad_star = pb()
     L = opnorm(Q)
 
-    w0 = zeros(10)
+    @test isapprox(norm(grad_star), 0)
 
-    @testset "$(name)" for (name, optimizer) in [
-        "GradientDescent" => ProtoGrad.GradientDescent(stepsize=1/L),
-    ]
-        for (k, output) in enumerate(take(optimizer(w0, objective), 200))
-            @test objective(output.solution) - f_star <= 2 * L * norm(x_star)^2 / (2 * (k - 1))
+    @testset "$(name)" for (name, optimizer) in
+                           ["GradientDescent" => GradientDescent(; stepsize = 1 / L)]
+        x = zeros(10)
+        state = init(optimizer, x)
+        for k = 1:200
+            val, pb = eval_with_pullback(objective, x, :Zygote)
+            grad = pb()
+            @test val - f_star <= 2 * L * norm(x_star)^2 / (2 * (k - 1))
+            step!(state, grad)
+        end
+    end
+
+    @testset "$(name)" for (name, optimizer) in
+                           ["Nesterov" => NesterovMethod(stepsize = 1 / L)]
+        x = zeros(10)
+        state = init(optimizer, x)
+        for k = 1:200
+            val, pb = eval_with_pullback(objective, x, :Zygote)
+            grad = pb()
+            @test val - f_star <= 2 * L * norm(x_star)^2 / k^2
+            step!(state, grad)
         end
     end
 
     @testset "$(name)" for (name, optimizer) in [
-        "Nesterov" => ProtoGrad.Nesterov(stepsize=1/L),
+        "Polyak" => HeavyBallMethod(stepsize = 1 / L, momentum = 0.5),
+        "Adam" => Adam(stepsize = 1 / L, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-8),
     ]
-        for (k, output) in enumerate(take(optimizer(w0, objective), 200))
-            @test objective(output.solution) - f_star <= 2 * L * norm(x_star)^2 / k^2
+        x = zeros(10)
+        state = init(optimizer, x)
+        for k = 1:1000
+            val, pb = eval_with_pullback(objective, x, :Zygote)
+            grad = pb()
+            step!(state, grad)
         end
-    end
-
-    @testset "$(name)" for (name, optimizer) in [
-        "Polyak" => ProtoGrad.Polyak(stepsize=1/L, momentum=0.5),
-        "RMSProp" => ProtoGrad.RMSProp(stepsize=1/L, alpha=0.99, epsilon=1e-8),
-        "Adam" => ProtoGrad.Adam(stepsize=1/L, beta1=0.9, beta2=0.999, epsilon=1e-8),
-    ]
-        max_iter = 1000
-
-        iterations = take(optimizer(w0, objective), max_iter)
-        solution = ProtoGrad.last(iterations).solution
-
-        @test objective(solution) <= f_star + 0.01 * abs(f_star)
+        @test objective(x) <= f_star + 0.01 * abs(f_star)
     end
 end
 
-@testset "Supervised objective" begin
+@testset "Linear model ($(T))" for T in [Float32, Float64]
+    input_size, output_size = 10, 1
+    batch_size = 5000
 
-    @testset "Linear model ($(T))" for T in [Float32, Float64]
+    W_true = randn(T, output_size, input_size)
+    b_true = randn(T, output_size)
 
-        input_size, output_size = 10, 1
-        batch_size = 5000
+    input = randn(T, input_size, batch_size)
+    label = W_true * input .+ b_true + randn(T, output_size, batch_size) / 10
 
-        W_true = randn(T, output_size, input_size)
-        b_true = randn(T, output_size)
+    Lf = 2 * opnorm(input * input') / batch_size
+    stepsize = 1 / Lf
 
-        x = randn(T, input_size, batch_size)
-        y = W_true * x .+ b_true + randn(T, output_size, batch_size) / 10
-
-        data_iter = Iterators.repeated((x, y))
-        f = SupervisedObjective(mse, data_iter)
-        Lf = 2 * opnorm(x * x') / batch_size
-        stepsize = 1 / Lf
-
-        m = Linear(randn(T, output_size, input_size), randn(T, output_size))
-
-        @testset "Basic checks $(name)" for (name, optimizer) in [
-            "GradientDescent" => ProtoGrad.GradientDescent(stepsize=stepsize),
-            "Polyak" => ProtoGrad.Polyak(stepsize=stepsize, momentum=0.5),
-            "Nesterov" => ProtoGrad.Nesterov(stepsize=stepsize),
-            "BarzilaiBorwein" => ProtoGrad.BarzilaiBorwein(alpha=stepsize),
-            "AdaGrad" => ProtoGrad.AdaGrad(stepsize=stepsize),
-            "RMSProp" => ProtoGrad.RMSProp(stepsize=stepsize),
-            "AdaDelta" => ProtoGrad.AdaDelta(),
-            "Adam" => ProtoGrad.Adam(stepsize=stepsize),
-        ]
-            m0 = copy(m)
-            seq = optimizer(m, f)
-
-            @test Base.IteratorSize(typeof(seq)) == Base.IsInfinite()
-
-            for output in Iterators.take(seq, 5)
-                @test length(ProtoGrad.overlap(m, output.solution)) == 0
-                @test typeof(output.solution) == typeof(m)
+    @testset "Accuracy $(name)" for (name, optimizer) in [
+        "GradientDescent" => GradientDescent(stepsize = stepsize),
+        "HeavyBall" => HeavyBallMethod(stepsize = stepsize, momentum = T(0.5)),
+        "Nesterov" => NesterovMethod(stepsize = stepsize),
+    ]
+        model = Linear(randn(T, output_size, input_size), randn(T, output_size))
+        state = init(optimizer, model)
+        for it = 1:1000
+            val, pb = eval_with_pullback(model, :Zygote) do m
+                output = m(input)
+                return mse(output, label)
             end
-
-            @test vec(m) == vec(m0)
-        end
-
-        @testset "Accuracy $(name)" for (name, optimizer) in [
-            "GradientDescent" => ProtoGrad.GradientDescent(stepsize=stepsize),
-            "Polyak" => ProtoGrad.Polyak(stepsize=stepsize, momentum=0.5),
-            "Nesterov" => ProtoGrad.Nesterov(stepsize=stepsize),
-        ]
-            seq = optimizer(m, f)
-
-            for (it, output) in enumerate(seq)
-                if it >= 1000
-                    @test isapprox(output.solution.W, W_true, rtol=5e-2)
-                    # @test isapprox(output.solution.b, b_true, rtol=1e-1)
-                    break
-                end
+            if it >= 1000
+                @test isapprox(model.W, W_true, rtol = 5e-2)
+                break
             end
+            grad = pb()
+            step!(state, grad)
         end
     end
 end

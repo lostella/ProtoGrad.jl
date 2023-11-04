@@ -1,6 +1,7 @@
 # # ProtoGrad.jl
 
 # [![Build status](https://github.com/JuliaFirstOrder/ProximalAlgorithms.jl/workflows/Test/badge.svg)](https://github.com/JuliaFirstOrder/ProximalAlgorithms.jl/actions?query=workflow%3ATest)
+# [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 # ProtoGrad is an experimental Julia package to work with gradient-based model optimization, including (of course!) deep learning.
 # It aims at being simple, composable, and flexible.
@@ -20,8 +21,8 @@ using ProtoGrad
 # The following (overly) simple example defines some type of linear model (a better version of this is `ProtoGrad.Linear`):
 
 struct LinearModel <: ProtoGrad.Model
-    A
-    b
+    A::Any
+    b::Any
 end
 
 (m::LinearModel)(x) = m.A * x .+ m.b
@@ -58,7 +59,7 @@ dot(m, m_sum)
 # In principle, any custom function of the model will do.
 # For example, we can use the mean squared error
 
-mean_squared_error(yhat, y) = sum((yhat .- y).^2) / size(y)[end]
+mean_squared_error(yhat, y) = sum((yhat .- y) .^ 2) / size(y)[end]
 
 # together with some data (here artificially generated, according to a random, noisy linear model)
 
@@ -73,30 +74,14 @@ objective = model -> mean_squared_error(model(x), y)
 
 objective(m) # returns some "large" loss value
 
-# Stochastic approximations to the full-data objective above can be implemented by iterating the data in batches, and coupling it with the loss, as follows:
-
-using StatsBase
-
-batch_size = 64
-batches = ProtoGrad.forever() do
-    idx = sample(1:size(x)[end], batch_size, replace = false)
-    return (x[:, idx], y[:, idx])
-end
-
-stochastic_objective = ProtoGrad.SupervisedObjective(mean_squared_error, batches)
-
-# Evaluating this new objective on `m` will yield
-
-stochastic_objective(m) |> println # a different
-stochastic_objective(m) |> println # value
-stochastic_objective(m) |> println # every
-stochastic_objective(m) |> println # time
-
 # ## Gradient computation
 
 # Computing the gradient of our objective with respect to the model is easy:
 
-grad, val = ProtoGrad.gradient(objective, m)
+using Zygote
+
+val, pb = ProtoGrad.eval_with_pullback(objective, m, :Zygote)
+grad = pb()
 
 # Here `val` is the value of the objective evaluated at `m`, while `grad` contains its gradient with respect to **all** attributes of `m`. Most importantly **`grad` is itself a `LinearModel` object**. Therefore, `grad` can be added or subtracted from `m`, used in dot products and so on.
 
@@ -106,8 +91,9 @@ grad, val = ProtoGrad.gradient(objective, m)
 # The following loop is plain gradient descent with constant stepsize:
 
 m_fit = copy(m)
-for it in 1:100
-    grad, _ = ProtoGrad.gradient(objective, m_fit)
+for it = 1:100
+    val, pb = ProtoGrad.eval_with_pullback(objective, m_fit, :Zygote)
+    grad = pb()
     m_fit .= m_fit .- 0.1 .* grad
 end
 
@@ -115,11 +101,16 @@ end
 
 objective(m_fit) # returns a small loss value compared to `m`
 
-# ProtoGrad implements gradient descent and other optimization algorithms in the form of iterators. The following will yield the same iterations as we just did:
+# ProtoGrad implements gradient descent and other optimization algorithms, with an iterator-like interface:
 
-optimizer = ProtoGrad.GradientDescent(stepsize=1e-1)
-iterations = Iterators.take(optimizer(m, objective), 100)
+using ProtoGrad: Adam, init, step!
 
-# The `iterations` object is an iterator that can be looped over, and its elements be inspected (for example to decide when to stop training). For the sake of compactness, here we will just take the output of the last iteration as solution: 
+optimizer = Adam(; stepsize = 1e-1)
+state = init(optimizer, m)
+for it = 1:100
+    val, pb = ProtoGrad.eval_with_pullback(objective, m, :Zygote)
+    grad = pb()
+    step!(state, grad)
+end
 
-m_fit = ProtoGrad.last(iterations).solution
+objective(m)

@@ -16,7 +16,6 @@ include("itertools.jl")
 include("losses.jl")
 include("model.jl")
 include("layers.jl")
-include("objectives.jl")
 include("gradient.jl")
 include("optimizers.jl")
 

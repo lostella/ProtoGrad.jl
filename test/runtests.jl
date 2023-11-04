@@ -2,15 +2,14 @@ using ProtoGrad
 using Test
 using Aqua
 using JET
+using Zygote
 
 @testset "Aqua" begin
-    Aqua.test_all(ProtoGrad; ambiguities=false)
+    Aqua.test_all(ProtoGrad; ambiguities = false)
 end
 
-if VERSION >= v"1.9.0"
-    @testset "JET" begin
-        JET.test_package(ProtoGrad)
-    end
+@testset "JET" begin
+    JET.test_package(ProtoGrad)
 end
 
 include("test_utils.jl")

@@ -1,14 +1,13 @@
 using Base: RefValue
 using Base.Broadcast: Style, DefaultArrayStyle, Broadcasted, flatten
 using LinearAlgebra
-using Zygote: pullback
 
 abstract type Model end
 
 # Basic operations
 
-_push_allparams!(::Nothing, a::AbstractArray{T}) where T <: Number = AbstractArray{T}[a]
-_push_allparams!(c::Vector, a::AbstractArray{T}) where T <: Number = push!(c, a)
+_push_allparams!(::Nothing, a::AbstractArray{T}) where {T<:Number} = AbstractArray{T}[a]
+_push_allparams!(c::Vector, a::AbstractArray{T}) where {T<:Number} = push!(c, a)
 _push_allparams!(c, ::Function) = c
 _push_allparams!(c, t::Tuple) = begin
     for el in t
@@ -16,7 +15,7 @@ _push_allparams!(c, t::Tuple) = begin
     end
     return c
 end
-_push_allparams!(c, m::T) where T <: Model = begin
+_push_allparams!(c, m::T) where {T<:Model} = begin
     for k in fieldnames(T)
         c = _push_allparams!(c, getfield(m, k))
     end
@@ -33,15 +32,19 @@ allparams(m::Model) = _push_allparams!(nothing, m)
 
 Base.vec(m::Model) = vcat((vec(p) for p in allparams(m))...)
 
-overlap(m1::Model, m2::Model) = [
-    p1 for (p1, p2) in zip(ProtoGrad.allparams(m1), ProtoGrad.allparams(m2))
-    if objectid(p1) == objectid(p2)
-]
+function overlap(m1::Model, m2::Model)
+    return [
+        p1 for (p1, p2) in zip(ProtoGrad.allparams(m1), ProtoGrad.allparams(m2)) if
+        objectid(p1) == objectid(p2)
+    ]
+end
 
 map_recursively(fun, f::Function) = f
 map_recursively(fun, a::AbstractArray) = fun(a)
 map_recursively(fun, t::Tuple) = fun.(t)
-map_recursively(fun, m::T) where T <: Model = T((map_recursively(fun, getfield(m, k)) for k in fieldnames(T))...)
+function map_recursively(fun, m::T) where {T<:Model}
+    return T((map_recursively(fun, getfield(m, k)) for k in fieldnames(T))...)
+end
 
 for fun in (:similar, :copy, :zero)
     _fun = Symbol("_", fun)
@@ -57,7 +60,7 @@ end
 Base.IteratorSize(::Type{<:Model}) = Base.HasLength()
 Base.length(m::Model) = sum(length(p) for p in allparams(m))
 
-function Base.iterate(m::Model, itr=Iterators.flatten(allparams(m)))
+function Base.iterate(m::Model, itr = Iterators.flatten(allparams(m)))
     y = iterate(itr)
     if y === nothing
         return nothing
@@ -66,7 +69,7 @@ function Base.iterate(m::Model, itr=Iterators.flatten(allparams(m)))
     return val, Iterators.rest(itr, s)
 end
 
-Base.show(io::IO, m::T) where T <: Model = print(io, T)
+Base.show(io::IO, m::T) where {T<:Model} = print(io, T)
 
 # Indexing
 
@@ -100,10 +103,10 @@ end
 Base.axes(::Model) = nothing
 Base.Broadcast.broadcastable(m::Model) = m
 
-Base.Broadcast.BroadcastStyle(::Type{T}) where T <: Model = Style{T}()
-Base.Broadcast.BroadcastStyle(s::Style{T}, ::DefaultArrayStyle{0}) where T <: Model = s
+Base.Broadcast.BroadcastStyle(::Type{T}) where {T<:Model} = Style{T}()
+Base.Broadcast.BroadcastStyle(s::Style{T}, ::DefaultArrayStyle{0}) where {T<:Model} = s
 
-Base.Broadcast.instantiate(bc::Broadcasted{Style{T}}) where T <: Model = bc
+Base.Broadcast.instantiate(bc::Broadcasted{Style{T}}) where {T<:Model} = bc
 
 # The idea here is:
 #   - have a recursive procedure that goes down to the leaves of the struct
@@ -122,10 +125,10 @@ _getfield(n::Number, k) = n
 _getfield(f::Function, k) = f
 
 function recursive_copyto!(a::AbstractArray, f, args)
-    a .= f.(args...)
+    return a .= f.(args...)
 end
 
-recursive_copyto!(f::Function, _, args) = return
+recursive_copyto!(f::Function, _, args) = return nothing
 
 function recursive_copyto!(t::Tuple, f, args)
     for (i, el) in Iterators.enumerate(t)
@@ -134,7 +137,7 @@ function recursive_copyto!(t::Tuple, f, args)
     end
 end
 
-function recursive_copyto!(m::T, f, args) where T <: Model
+function recursive_copyto!(m::T, f, args) where {T<:Model}
     for k in fieldnames(T)
         dest_k = getfield(m, k)
         args_k = [_getfield(arg, k) for arg in args]
@@ -142,10 +145,10 @@ function recursive_copyto!(m::T, f, args) where T <: Model
     end
 end
 
-function Base.copyto!(dest::T, bc::Broadcasted{Style{T}}) where T <: Model
+function Base.copyto!(dest::T, bc::Broadcasted{Style{T}}) where {T<:Model}
     flat_bc = flatten(bc)
     recursive_copyto!(dest, flat_bc.f, flat_bc.args)
-    dest
+    return dest
 end
 
 find_model(bc::Base.Broadcast.Broadcasted) = find_model(bc.args)
@@ -154,44 +157,46 @@ find_model(x) = x
 find_model(m::Model, rest) = m
 find_model(::Any, rest) = find_model(rest)
 
-function Base.copy(bc::Broadcasted{Style{T}}) where T <: Model
+function Base.copy(bc::Broadcasted{Style{T}}) where {T<:Model}
     m = find_model(bc)
     dest = similar(m)
-    copyto!(dest, bc)
+    return copyto!(dest, bc)
 end
 
 # Vector space operations
 
 for op in (:+, :-)
     @eval begin
-        function Base.$op(a::T, b::T) where T <: Model
-            Base.broadcast($op, a, b)
+        function Base.$op(a::T, b::T) where {T<:Model}
+            return Base.broadcast($op, a, b)
         end
 
         function Base.$op(a::Model, b::Number)
-            Base.broadcast($op, a, b)
+            return Base.broadcast($op, a, b)
         end
 
         function Base.$op(a::Number, b::Model)
-            Base.broadcast($op, a, b)
+            return Base.broadcast($op, a, b)
         end
     end
 end
 
 for op in (:*, :/)
     @eval function Base.$op(a::Model, b::Number)
-        Base.broadcast($op, a, b)
+        return Base.broadcast($op, a, b)
     end
 end
 
 function Base.:*(a::Number, b::Model)
-    Base.broadcast(*, a, b)
+    return Base.broadcast(*, a, b)
 end
 
 function Base.:\(a::Number, b::Model)
-    Base.broadcast(/, a, b)
+    return Base.broadcast(/, a, b)
 end
 
 # Linear algebra
 
-LinearAlgebra.dot(m1::T, m2::T) where T <: Model = sum((dot(p1, p2) for (p1, p2) in zip(allparams(m1), allparams(m2))))
+function LinearAlgebra.dot(m1::T, m2::T) where {T<:Model}
+    return sum((dot(p1, p2) for (p1, p2) in zip(allparams(m1), allparams(m2))))
+end
