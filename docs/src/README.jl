@@ -27,10 +27,10 @@ end
 
 (m::LinearModel)(x) = m.A * x .+ m.b
 
-# All attributes of a model are interpreted as parameters to be optimized, and so gradients will be taken with respect to them. It is therefore assumed that all attributes are
-# 1. Numerical arrays, i.e. of type `<:AbstractArray{<:AbstractFloat}`;
-# 2. Functions;
-# 3. Other `Model` objects;
+# All attributes of a model are interpreted as parameters to be optimized, and so gradients will be taken with respect to them. It is therefore assumed that all attributes are either
+# 1. Numerical arrays,
+# 2. Functions,
+# 3. Other `Model` objects,
 # 4. `Tuple`s of objects of the above types.
 
 # > **Note:** This means, for example, that hyper-paramenters cannot be stored as attributes.
