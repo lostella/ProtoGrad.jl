@@ -5,6 +5,15 @@ using Serialization
 using Statistics
 using Test
 
+struct CustomModel <: Model
+    m1::Any
+    act1::Any
+    m2::Any
+    act2::Any
+end
+
+(m::CustomModel)(x) = (m.act2 ∘ m.m2 ∘ m.act1 ∘ m.m1)(x)
+
 @testset "Basic operations" begin
     @testset "$(T)" for T in [Float16, Float32, Float64]
         @testset "$(name)" for (name, m) in [
@@ -177,15 +186,6 @@ end
     end
 
     @testset "Custom ($(T))" for T in [Float32, Float64]
-        struct CustomModel <: Model
-            m1::Any
-            act1::Any
-            m2::Any
-            act2::Any
-        end
-
-        (m::CustomModel)(x) = (m.act2 ∘ m.m2 ∘ m.act1 ∘ m.m1)(x)
-
         input_size, hidden_size, output_size = 1000, 50, 1
         batch_size = 64
 
