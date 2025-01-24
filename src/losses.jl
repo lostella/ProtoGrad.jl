@@ -9,7 +9,7 @@ function cross_entropy(probs, label; dims = 1, agg = mean)
     return agg(.-sum(ce_summands; dims = dims))
 end
 
-function class_error(probs, label; dims = 1, agg = mean)
+function class_error(probs::AbstractArray, label::AbstractArray; dims = 1, agg = mean)
     class_predicted = argmax(probs; dims = dims)
     class_actual = argmax(label; dims = dims)
     return agg(1 .- (class_predicted .== class_actual))
