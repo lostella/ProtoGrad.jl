@@ -1,6 +1,6 @@
 # ProtoGrad.jl
 
-[![Build status](https://github.com/lostella/ProtoGrad.jl/workflows/test.yml/badge.svg?branch=main)](https://github.com/lostella/ProtoGrad.jl/actions?query=branch%3Amain)
+[![Build status](https://github.com/lostella/ProtoGrad.jl/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/lostella/ProtoGrad.jl/actions/workflows/test.yml?query=branch%3Amain)
 [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 ProtoGrad is an experimental Julia package to work with gradient-based model optimization, including (of course!) deep learning.
